@@ -1,0 +1,19 @@
+{
+  "name": "nova-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Nova AI - The Universal AI Operating Layer",
+  "license": "MIT",
+  "packageManager": "pnpm@11.10.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=11.0.0"
+  },
+  "scripts": {
+    "dev": "echo \"Development commands will be added later\"",
+    "build": "echo \"Build commands will be added later\"",
+    "test": "echo \"Test commands will be added later\"",
+    "lint": "echo \"Lint commands will be added later\"",
+    "format": "echo \"Format commands will be added later\""
+  }
+}
