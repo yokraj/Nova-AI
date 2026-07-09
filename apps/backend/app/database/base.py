@@ -14,3 +14,7 @@ class Base(DeclarativeBase):
     """
 
     pass
+
+
+# Base metadata will be associated with the models dynamically during model import
+# in the migrations env.py or inline use.

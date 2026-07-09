@@ -1,25 +1,49 @@
-# Node
+# Node Dependencies
 node_modules/
 
-# Python
+# Python Environment & Caching
 .venv/
+venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Environment
+# Local Environment Settings
 .env
+.env.local
+.env.*.local
 
-# Build
+# Build & Distribution packages
 dist/
 build/
+*.egg-info/
+.eggs/
 
-# Coverage
+# Coverage Analysis
 .coverage
 htmlcov/
+.tox/
+.noscript/
 
-# IDE
+# IDE and Project Tool Caches
 .vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
 
-# OS
+# System & OS Files
 .DS_Store
 Thumbs.db
+
+# Caches & Temporary Storage
+tmp/
+temp/
+cache/
+.cache/

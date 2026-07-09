@@ -4,7 +4,7 @@ Loads, validates, and stores application settings from environment variables
 using Pydantic Settings.
 """
 
-from typing import Any, List, Union
+from typing import Any, List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.core.version import APP_NAME, VERSION
@@ -36,6 +36,16 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "nova_ai"
     DATABASE_URL: Union[str, None] = None
     DB_ECHO: bool = False
+
+    # AI Gateway Settings
+    AI_DEFAULT_MODEL: str = "gpt-4o"
+    AI_MAX_RETRIES: int = 3
+    AI_TIMEOUT_SECONDS: float = 30.0
+
+    # Future Provider API Keys
+    OPENAI_API_KEY: Optional[str] = None
+    ANTHROPIC_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
 
     # CORS Origins Settings
     BACKEND_CORS_ORIGINS: List[str] = Field(default_factory=list)

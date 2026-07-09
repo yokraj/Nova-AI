@@ -1,0 +1,30 @@
+"""SQLAlchemy model definition for Message entities.
+
+Maps role configurations, text content details, token metrics, and timestamps.
+"""
+
+import uuid
+from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.database.models.base import BaseEntity
+
+
+class Message(BaseEntity):
+    """Message entity representing chat contents within a conversation thread."""
+
+    __tablename__ = "messages"
+
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    token_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+
+    # Relationships
+    conversation = relationship("Conversation", back_populates="messages")

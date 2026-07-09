@@ -7,6 +7,9 @@ used throughout the Nova AI backend.
 from typing import Final
 from app.core.version import API_VERSION, APP_NAME
 
+# Project Metadata mapping
+PROJECT_NAME: Final[str] = APP_NAME
+
 # Health Check Statuses
 HEALTH_STATUS_OK: Final[str] = "healthy"
 HEALTH_STATUS_UNHEALTHY: Final[str] = "unhealthy"

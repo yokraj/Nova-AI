@@ -1,0 +1,22 @@
+# Global Git attributes for Nova AI.
+# Configures text line endings and language attributes.
+
+# Set default behavior to automatically handle line endings.
+* text=auto
+
+# Python source files must use LF line endings.
+*.py text eol=lf diff=python
+
+# Web & Config structures must use LF line endings.
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+
+# PowerShell scripts must use LF line endings.
+*.ps1 text eol=lf
+
+# Windows Batch scripts must keep CRLF line endings.
+*.bat text eol=crlf
+*.cmd text eol=crlf

@@ -1,32 +1,27 @@
 """Main entrypoint for the Nova AI FastAPI backend service.
 
-Initializes the application, configures middlewares (CORS, Request Logging),
-registers global exception handlers, sets up the lifespan logger, and exposes
-the system utility endpoints.
+Initializes the application, configures global structured logging, registers
+middlewares, routes, custom exception mappings, and handles lifecycle events.
 """
 
 from contextlib import asynccontextmanager
-import time
-from typing import Any, AsyncGenerator
-import uuid
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+from typing import AsyncGenerator
+from fastapi import FastAPI
 from sqlalchemy.exc import SQLAlchemyError
 import structlog
 
+from app.api.router import router as api_router
 from app.core.config import settings
-from app.core.constants import API_VERSION, HEALTH_STATUS_OK, PROJECT_NAME
+from app.core.constants import API_VERSION, PROJECT_NAME
+from app.core.dependency_container import container
 from app.core.exceptions import (
     ApplicationException,
     application_exception_handler,
     global_exception_handler,
     sqlalchemy_exception_handler,
 )
-from app.core.logging import (
-    bind_request_context,
-    clear_request_context,
-    configure_logging,
-)
+from app.core.logging import configure_logging
+from app.core.middleware import register_middleware
 
 # Configure structured logging before application boot
 configure_logging(log_level=settings.LOG_LEVEL, debug=settings.DEBUG)
@@ -44,8 +39,31 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         host=settings.HOST,
         port=settings.PORT,
     )
+    # Initialize global AI Gateway container services
+    from app.core.dependency_container import (
+        register_ai_gateway_dependencies,
+        register_workflow_dependencies,
+        register_runtime_dependencies,
+        resolve,
+    )
+
+    register_ai_gateway_dependencies()
+    register_workflow_dependencies()
+    register_runtime_dependencies()
+
+    # Boot the Runtime Kernel
+    from app.runtime.kernel import RuntimeKernel
+    kernel = resolve(RuntimeKernel)
+    await kernel.boot()
+
     yield
     logger.info("server_shutdown_initiated")
+
+    # Gracefully stop the Runtime Kernel
+    await kernel.shutdown()
+
+    # Clean up container resource allocations on shutdown
+    container.clear()
 
 
 # OpenAPI documentation tag definitions
@@ -72,64 +90,11 @@ app.add_exception_handler(ApplicationException, application_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
-# Configure CORS policies
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Register all request pipelines, CORS configurations, security, and gzip filters
+register_middleware(app)
 
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next: Any) -> Any:
-    """HTTP Middleware logging incoming requests and responses with trace context."""
-    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-    correlation_id = request.headers.get("X-Correlation-ID", request_id)
-
-    # Bind request trace IDs to structlog contextvars
-    bind_request_context(
-        request_id=request_id, correlation_id=correlation_id, user_id=None
-    )
-
-    logger.info(
-        "http_request_received",
-        method=request.method,
-        path=request.url.path,
-        client_host=request.client.host if request.client else None,
-    )
-
-    start_time = time.perf_counter()
-    try:
-        response = await call_next(request)
-        execution_time_ms = (time.perf_counter() - start_time) * 1000
-
-        # Inject tracing headers into the response
-        response.headers["X-Request-ID"] = request_id
-        response.headers["X-Correlation-ID"] = correlation_id
-
-        logger.info(
-            "http_response_sent",
-            method=request.method,
-            path=request.url.path,
-            status_code=response.status_code,
-            execution_time_ms=round(execution_time_ms, 2),
-        )
-        return response
-    except Exception as e:
-        execution_time_ms = (time.perf_counter() - start_time) * 1000
-        logger.error(
-            "http_request_failed",
-            method=request.method,
-            path=request.url.path,
-            error=str(e),
-            execution_time_ms=round(execution_time_ms, 2),
-        )
-        raise
-    finally:
-        # Clear contextvars to prevent pollution of log contexts across request loops
-        clear_request_context()
+# Register central routers (System status, API v1, etc.)
+app.include_router(api_router)
 
 
 @app.get("/", tags=["system"])
@@ -140,13 +105,4 @@ async def root() -> dict:
         "api_version": API_VERSION,
         "app_version": settings.VERSION,
         "status": "online",
-    }
-
-
-@app.get("/health", tags=["system"])
-async def health_check() -> dict:
-    """Basic health check endpoint validating server availability."""
-    return {
-        "status": HEALTH_STATUS_OK,
-        "version": settings.VERSION,
     }
