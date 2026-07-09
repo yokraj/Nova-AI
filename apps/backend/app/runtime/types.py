@@ -3,7 +3,7 @@
 Defines state indicators for kernel engines, capability SDK adapters, and events.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
@@ -38,7 +38,7 @@ class RuntimeEvent(BaseModel):
         ..., description="The ID or name of the component that sent this event."
     )
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC),
         description="Event dispatch timestamp (UTC).",
     )
     payload: Dict[str, Any] = Field(

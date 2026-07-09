@@ -4,6 +4,7 @@ Allows step status event callbacks subscriptions and domain event publishing.
 """
 
 import asyncio
+import inspect
 from typing import Any, Callable, Dict, List
 
 import structlog
@@ -43,7 +44,7 @@ class EventBus:
         tasks = []
         for callback in self._listeners[event_type]:
             try:
-                if asyncio.iscoroutinefunction(callback):
+                if inspect.iscoroutinefunction(callback):
                     tasks.append(callback(data))
                 else:
                     callback(data)

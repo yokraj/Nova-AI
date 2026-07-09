@@ -3,7 +3,7 @@
 Defines schemas, execution states, steps, contexts, and result types.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
@@ -75,7 +75,7 @@ class Workflow(BaseModel):
 class HistoryEntry(BaseModel):
     """Records a single state transition history log details."""
 
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     event: str = Field(..., description="Description of the event.")
     step_id: Optional[str] = Field(
         None, description="Optional associated step ID."

@@ -4,6 +4,7 @@ Stores history logs, matches wildcard topics, and dispatches replayable events.
 """
 
 import asyncio
+import inspect
 from typing import Any, Callable, Dict, List
 import structlog
 
@@ -67,7 +68,7 @@ class RuntimeEventBus(IKernelService):
             if self._match_topic(pattern, event.topic):
                 for callback in callbacks:
                     try:
-                        if asyncio.iscoroutinefunction(callback):
+                        if inspect.iscoroutinefunction(callback):
                             tasks.append(callback(event))
                         else:
                             callback(event)

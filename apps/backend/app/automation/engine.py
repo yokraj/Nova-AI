@@ -5,7 +5,7 @@ cancellation checks, variable mappings, and event dispatches.
 """
 
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Callable, Dict, Optional
 import structlog
 
@@ -174,7 +174,7 @@ class WorkflowExecutionEngine:
             context: Active variables execution context.
         """
         step.status = WorkflowStatus.RUNNING
-        step.started_at = datetime.utcnow()
+        step.started_at = datetime.now(UTC)
         context.log("step_started", step_id=step.id)
         await self.event_bus.publish("step_started", {"step_id": step.id})
 
@@ -203,7 +203,7 @@ class WorkflowExecutionEngine:
                     context.variables[context_key] = outputs.get(output_key)
 
                 step.status = WorkflowStatus.COMPLETED
-                step.completed_at = datetime.utcnow()
+                step.completed_at = datetime.now(UTC)
                 context.log("step_completed", step_id=step.id)
                 await self.event_bus.publish(
                     "step_completed", {"step_id": step.id}
@@ -220,7 +220,7 @@ class WorkflowExecutionEngine:
                 )
                 if attempts >= max_attempts:
                     step.status = WorkflowStatus.FAILED
-                    step.completed_at = datetime.utcnow()
+                    step.completed_at = datetime.now(UTC)
                     context.log(
                         "step_failed", step_id=step.id, details={"error": error_msg}
                     )
