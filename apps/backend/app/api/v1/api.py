@@ -16,6 +16,10 @@ router.include_router(auth_router)
 # Mount user query endpoints
 router.include_router(user_router)
 
+# Mount conversation endpoints
+from app.conversation.api.conversation_router import router as conversation_router
+router.include_router(conversation_router)
+
 # Mount workflow engine endpoints
 from app.automation import workflows_router
 

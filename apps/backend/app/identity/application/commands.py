@@ -5,13 +5,13 @@ Defines input parameter command structures driving account modifications actions
 
 from typing import Optional
 import uuid
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 class RegisterUserCommand(BaseModel):
     """Command requesting registration of a new user account profile."""
 
-    email: EmailStr = Field(..., description="Target user email address.")
+    email: str = Field(..., description="Target user email address.")
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8)
     display_name: Optional[str] = Field(None, max_length=100)

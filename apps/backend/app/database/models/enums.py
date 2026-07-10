@@ -29,3 +29,12 @@ class MessageRole(str, Enum):
     USER = "user"
     ASSISTANT = "assistant"
     TOOL = "tool"
+
+
+class AttachmentType(str, Enum):
+    """Supported file upload attachment types."""
+
+    FILE = "file"
+    IMAGE = "image"
+    CODE = "code"
+    PDF = "pdf"

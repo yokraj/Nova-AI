@@ -28,3 +28,6 @@ class Message(BaseEntity):
 
     # Relationships
     conversation = relationship("Conversation", back_populates="messages")
+    attachments = relationship(
+        "Attachment", back_populates="message", cascade="all, delete-orphan"
+    )

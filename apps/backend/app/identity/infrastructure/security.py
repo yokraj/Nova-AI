@@ -1,23 +1,29 @@
 """Security and Cryptography tools for the Nova AI Identity platform.
 
 Implements password hashing (bcrypt), JWT generation/decoding,
-and secure hex token generators.
+and secure hex token generators. Redirects to modernized security services.
 """
 
-from datetime import datetime, timedelta, timezone
-import secrets
+from datetime import timedelta
 from typing import Any, Dict, Optional
-from jose import JWTError, jwt
-from passlib.context import CryptContext
 
-# CryptContext configured with bcrypt backend scheme
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from app.identity.services.jwt_service import JwtService
+from app.identity.services.password_hasher import PasswordHasher
 
-# Global JWT constants
+# Global config variables preserved for imports compatibility
 JWT_SECRET_KEY = "NOVA_AI_SECRET_KEY_PLACEHOLDER"
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+# Instantiate facade services backings
+_hasher = PasswordHasher()
+_jwt = JwtService(
+    secret_key=JWT_SECRET_KEY,
+    algorithm=JWT_ALGORITHM,
+    access_token_expire_minutes=ACCESS_TOKEN_EXPIRE_MINUTES,
+    refresh_token_expire_days=REFRESH_TOKEN_EXPIRE_DAYS,
+)
 
 
 def hash_password(password: str) -> str:
@@ -29,7 +35,7 @@ def hash_password(password: str) -> str:
     Returns:
         The bcrypt-hashed password string.
     """
-    return pwd_context.hash(password)
+    return _hasher.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -42,7 +48,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if the password matches; False otherwise.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return _hasher.verify(plain_password, hashed_password)
 
 
 def create_access_token(
@@ -57,16 +63,21 @@ def create_access_token(
     Returns:
         The encoded string representation of the JWT access token.
     """
-    to_encode = payload.copy()
-    if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
-    else:
-        expire = datetime.now(timezone.utc) + timedelta(
-            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+    sub = payload.get("sub", "")
+    # Preserve extra fields in payload claims
+    extra = {k: v for k, v in payload.items() if k != "sub"}
 
-    to_encode.update({"exp": int(expire.timestamp())})
-    return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    if expires_delta:
+        # If delta is provided, calculate minutes override
+        mins = int(expires_delta.total_seconds() / 60)
+        jwt_override = JwtService(
+            secret_key=JWT_SECRET_KEY,
+            algorithm=JWT_ALGORITHM,
+            access_token_expire_minutes=mins,
+        )
+        return jwt_override.create_access_token(sub, extra)
+
+    return _jwt.create_access_token(sub, extra)
 
 
 def decode_access_token(token: str) -> Dict[str, Any]:
@@ -77,13 +88,20 @@ def decode_access_token(token: str) -> Dict[str, Any]:
 
     Returns:
         The decoded dictionary claim payload.
-
-    Raises:
-        JWTError: If token signature check or parsing fails.
     """
-    return jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    from app.identity.services.exceptions import InvalidTokenError
+
+    try:
+        return _jwt.verify_access_token(token)
+    except InvalidTokenError as error:
+        from jose import JWTError
+
+        # Raise JWTError for compatibility with legacy decode handlers
+        raise JWTError(str(error)) from error
 
 
 def generate_refresh_token() -> str:
     """Generates a cryptographically secure random hexadecimal refresh token."""
+    import secrets
+
     return secrets.token_hex(32)

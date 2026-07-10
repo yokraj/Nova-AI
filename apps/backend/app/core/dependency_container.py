@@ -176,11 +176,171 @@ def register_request_dependencies(session: AsyncSession) -> None:
         ISessionRepository, SingletonProvider(lambda: session_repo)
     )
 
+    # 2.5 Register Conversation Repositories
+    from app.conversation.repositories import (
+        ConversationRepository,
+        MessageRepository,
+        AttachmentRepository,
+        IConversationRepository,
+        IMessageRepository,
+        IAttachmentRepository,
+    )
+    conv_repo = ConversationRepository(session)
+    msg_repo = MessageRepository(session)
+    attach_repo = AttachmentRepository(session)
+
+    container.register(
+        ConversationRepository, SingletonProvider(lambda: conv_repo)
+    )
+    container.register(
+        MessageRepository, SingletonProvider(lambda: msg_repo)
+    )
+    container.register(
+        AttachmentRepository, SingletonProvider(lambda: attach_repo)
+    )
+
+    container.register(
+        IConversationRepository, SingletonProvider(lambda: conv_repo)
+    )
+    container.register(
+        IMessageRepository, SingletonProvider(lambda: msg_repo)
+    )
+    container.register(
+        IAttachmentRepository, SingletonProvider(lambda: attach_repo)
+    )
+
     # 3. Register Services
+    from app.identity.services.password_hasher import PasswordHasher
+    from app.identity.services.jwt_service import JwtService
+    from app.identity.services.security_facade import SecurityService
+    from app.identity.services.interfaces import IPasswordHasher, ITokenService
+
+    hasher = PasswordHasher()
+    jwt_service = JwtService()
+    security_service = SecurityService(hasher, jwt_service, token_repo)
+
+    container.register(PasswordHasher, SingletonProvider(lambda: hasher))
+    container.register(JwtService, SingletonProvider(lambda: jwt_service))
+    container.register(
+        SecurityService, SingletonProvider(lambda: security_service)
+    )
+
+    container.register(IPasswordHasher, SingletonProvider(lambda: hasher))
+    container.register(ITokenService, SingletonProvider(lambda: jwt_service))
+
     user_service = UserService(user_repo)
     auth_service = AuthService(uow, user_repo, token_repo)
     container.register(UserService, SingletonProvider(lambda: user_service))
     container.register(AuthService, SingletonProvider(lambda: auth_service))
+
+    # 4. Register Use Cases
+    from app.identity.application.use_cases import (
+        RegisterUserUseCase,
+        LoginUseCase,
+        RefreshTokenUseCase,
+        LogoutUseCase,
+        GetProfileUseCase,
+        UpdateProfileUseCase,
+    )
+
+    register_uc = RegisterUserUseCase(uow, user_repo, hasher)
+    login_uc = LoginUseCase(uow, user_repo, security_service, session_repo)
+    refresh_uc = RefreshTokenUseCase(uow, user_repo, security_service)
+    logout_uc = LogoutUseCase(uow, token_repo)
+    get_profile_uc = GetProfileUseCase(user_repo)
+    update_profile_uc = UpdateProfileUseCase(uow, user_repo)
+
+    container.register(RegisterUserUseCase, SingletonProvider(lambda: register_uc))
+    container.register(LoginUseCase, SingletonProvider(lambda: login_uc))
+    container.register(RefreshTokenUseCase, SingletonProvider(lambda: refresh_uc))
+    container.register(LogoutUseCase, SingletonProvider(lambda: logout_uc))
+    container.register(GetProfileUseCase, SingletonProvider(lambda: get_profile_uc))
+    container.register(UpdateProfileUseCase, SingletonProvider(lambda: update_profile_uc))
+
+    # 4.5 Register Conversation Use Cases
+    from app.conversation.application.use_cases import (
+        CreateConversationUseCase,
+        SendMessageUseCase,
+        ListConversationsUseCase,
+        GetConversationUseCase,
+        RenameConversationUseCase,
+        ArchiveConversationUseCase,
+        DeleteConversationUseCase,
+        RestoreConversationUseCase,
+        GetMessagesUseCase,
+    )
+
+    create_conv_uc = CreateConversationUseCase(uow, conv_repo)
+    send_msg_uc = SendMessageUseCase(uow, conv_repo, msg_repo, attach_repo)
+    list_conv_uc = ListConversationsUseCase(conv_repo, msg_repo)
+    get_conv_uc = GetConversationUseCase(conv_repo)
+    rename_conv_uc = RenameConversationUseCase(uow, conv_repo)
+    archive_conv_uc = ArchiveConversationUseCase(uow, conv_repo)
+    delete_conv_uc = DeleteConversationUseCase(uow, conv_repo)
+    restore_conv_uc = RestoreConversationUseCase(uow, conv_repo)
+    get_msgs_uc = GetMessagesUseCase(conv_repo, msg_repo, attach_repo)
+
+    container.register(
+        CreateConversationUseCase, SingletonProvider(lambda: create_conv_uc)
+    )
+    container.register(
+        SendMessageUseCase, SingletonProvider(lambda: send_msg_uc)
+    )
+    container.register(
+        ListConversationsUseCase, SingletonProvider(lambda: list_conv_uc)
+    )
+    container.register(
+        GetConversationUseCase, SingletonProvider(lambda: get_conv_uc)
+    )
+    container.register(
+        RenameConversationUseCase, SingletonProvider(lambda: rename_conv_uc)
+    )
+    container.register(
+        ArchiveConversationUseCase, SingletonProvider(lambda: archive_conv_uc)
+    )
+    container.register(
+        DeleteConversationUseCase, SingletonProvider(lambda: delete_conv_uc)
+    )
+    container.register(
+        RestoreConversationUseCase, SingletonProvider(lambda: restore_conv_uc)
+    )
+    container.register(
+        GetMessagesUseCase, SingletonProvider(lambda: get_msgs_uc)
+    )
+
+    # 4.7 Register Conversation Services
+    from app.conversation.services import (
+        ConversationTitleGenerator,
+        TokenCounter,
+        ContextWindowService,
+        ConversationService,
+        ITokenCounter,
+        IContextWindowService,
+        IConversationService,
+    )
+
+    title_gen = ConversationTitleGenerator()
+    token_cnt = TokenCounter()
+    ctx_window = ContextWindowService(token_cnt)
+    conv_service = ConversationService(uow, conv_repo, msg_repo, title_gen)
+
+    container.register(
+        ConversationTitleGenerator, SingletonProvider(lambda: title_gen)
+    )
+    container.register(TokenCounter, SingletonProvider(lambda: token_cnt))
+    container.register(ITokenCounter, SingletonProvider(lambda: token_cnt))
+    container.register(
+        ContextWindowService, SingletonProvider(lambda: ctx_window)
+    )
+    container.register(
+        IContextWindowService, SingletonProvider(lambda: ctx_window)
+    )
+    container.register(
+        ConversationService, SingletonProvider(lambda: conv_service)
+    )
+    container.register(
+        IConversationService, SingletonProvider(lambda: conv_service)
+    )
 
 
 def register_ai_gateway_dependencies() -> None:

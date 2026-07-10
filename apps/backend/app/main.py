@@ -86,6 +86,74 @@ app = FastAPI(
 )
 
 # Register custom and global fallback exception handlers
+from app.identity.services.exceptions import (
+    SecurityException,
+    ExpiredTokenError,
+    InvalidTokenError,
+    InvalidCredentialsError,
+    TokenReuseDetectedError,
+)
+from fastapi import status
+from fastapi.responses import JSONResponse
+from fastapi import Request
+
+async def security_exception_handler(request: Request, exc: SecurityException) -> JSONResponse:
+    if isinstance(exc, ExpiredTokenError):
+        code = status.HTTP_401_UNAUTHORIZED
+        msg = "Token has expired."
+    elif isinstance(exc, InvalidTokenError):
+        code = status.HTTP_401_UNAUTHORIZED
+        msg = "Invalid token."
+    elif isinstance(exc, InvalidCredentialsError):
+        if "already registered" in str(exc):
+            code = status.HTTP_409_CONFLICT
+        else:
+            code = status.HTTP_401_UNAUTHORIZED
+        msg = str(exc)
+    elif isinstance(exc, TokenReuseDetectedError):
+        code = status.HTTP_403_FORBIDDEN
+        msg = str(exc)
+    else:
+        code = status.HTTP_400_BAD_REQUEST
+        msg = str(exc)
+
+    return JSONResponse(
+        status_code=code,
+        content={
+            "error": exc.__class__.__name__,
+            "message": msg,
+        }
+    )
+
+app.add_exception_handler(SecurityException, security_exception_handler)
+
+from app.conversation.domain.exceptions import (
+    ConversationException,
+    ConversationNotFoundError,
+    ConversationAccessDeniedError,
+    ConversationArchivedError,
+    ConversationValidationError,
+)
+
+async def conversation_exception_handler(request: Request, exc: ConversationException) -> JSONResponse:
+    if isinstance(exc, ConversationNotFoundError):
+        code = status.HTTP_404_NOT_FOUND
+    elif isinstance(exc, ConversationAccessDeniedError):
+        code = status.HTTP_403_FORBIDDEN
+    elif isinstance(exc, (ConversationValidationError, ConversationArchivedError)):
+        code = status.HTTP_400_BAD_REQUEST
+    else:
+        code = status.HTTP_400_BAD_REQUEST
+
+    return JSONResponse(
+        status_code=code,
+        content={
+            "error": exc.__class__.__name__,
+            "message": str(exc),
+        }
+    )
+
+app.add_exception_handler(ConversationException, conversation_exception_handler)
 app.add_exception_handler(ApplicationException, application_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)

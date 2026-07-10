@@ -6,13 +6,13 @@ Defines serialized fields constraints for HTTP registration, login, and profile.
 from datetime import datetime
 from typing import Optional
 import uuid
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 class RegisterRequest(BaseModel):
     """Payload to register a new user account."""
 
-    email: EmailStr = Field(..., description="Target email address.")
+    email: str = Field(..., description="Target email address.")
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8)
     display_name: Optional[str] = Field(None, max_length=100)
