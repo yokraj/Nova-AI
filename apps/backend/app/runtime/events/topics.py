@@ -1,0 +1,20 @@
+"""Enumerate system event topics.
+"""
+
+from enum import Enum
+
+
+class Topic(str, Enum):
+    """Enumeration of system-wide event topics."""
+
+    CONVERSATION_CREATED = "CONVERSATION_CREATED"
+    CONVERSATION_UPDATED = "CONVERSATION_UPDATED"
+    USER_REGISTERED = "USER_REGISTERED"
+    USER_LOGIN = "USER_LOGIN"
+    AI_REQUEST = "AI_REQUEST"
+    AI_RESPONSE = "AI_RESPONSE"
+    JOB_STARTED = "JOB_STARTED"
+    JOB_COMPLETED = "JOB_COMPLETED"
+    JOB_FAILED = "JOB_FAILED"
+    AGENT_STARTED = "AGENT_STARTED"
+    AGENT_STOPPED = "AGENT_STOPPED"

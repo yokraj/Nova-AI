@@ -19,6 +19,18 @@ from app.runtime.diagnostics import RuntimeDiagnostics
 from app.runtime.event_bus import RuntimeEventBus
 from app.runtime.kernel import RuntimeKernel
 from app.runtime.runtime_manager import RuntimeManager
+from app.runtime.events import (
+    SystemEventError,
+    EventPublishError,
+    EventReplayError,
+    HandlerError,
+    Topic,
+    SystemEvent,
+    EventHandler,
+    Subscriber,
+    EventStore,
+    EventBus,
+)
 
 __all__ = [
     "KernelException",
@@ -38,4 +50,15 @@ __all__ = [
     "RuntimeEventBus",
     "RuntimeKernel",
     "RuntimeManager",
+    "SystemEventError",
+    "EventPublishError",
+    "EventReplayError",
+    "HandlerError",
+    "Topic",
+    "SystemEvent",
+    "EventHandler",
+    "Subscriber",
+    "EventStore",
+    "EventBus",
 ]
+

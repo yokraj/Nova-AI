@@ -36,6 +36,34 @@ from app.agents.bus import (
     RoutingService,
     AgentEventBus,
 )
+from app.agents.permissions import (
+    AgentPermissionError,
+    PermissionDeniedError,
+    PermissionExpiredError,
+    InvalidPermissionError,
+    PolicyViolationError,
+    ResourceType,
+    PermissionPolicy,
+    PolicyEffect,
+    PolicyDuration,
+    PermissionRequest,
+    PermissionResult,
+    PermissionManager,
+)
+from app.agents.scheduler import (
+    AgentSchedulerError,
+    JobNotFoundError,
+    SchedulerError,
+    JobTimeoutError,
+    RetryLimitExceededError,
+    Priority,
+    JobStatus,
+    RetryPolicy,
+    AgentJob,
+    JobResult,
+    JobQueue,
+    AgentScheduler,
+)
 
 __all__ = [
     "AgentCapability",
@@ -67,6 +95,32 @@ __all__ = [
     "SubscriptionManager",
     "RoutingService",
     "AgentEventBus",
+    "AgentPermissionError",
+    "PermissionDeniedError",
+    "PermissionExpiredError",
+    "InvalidPermissionError",
+    "PolicyViolationError",
+    "ResourceType",
+    "PermissionPolicy",
+    "PolicyEffect",
+    "PolicyDuration",
+    "PermissionRequest",
+    "PermissionResult",
+    "PermissionManager",
+    "AgentSchedulerError",
+    "JobNotFoundError",
+    "SchedulerError",
+    "JobTimeoutError",
+    "RetryLimitExceededError",
+    "Priority",
+    "JobStatus",
+    "RetryPolicy",
+    "AgentJob",
+    "JobResult",
+    "JobQueue",
+    "AgentScheduler",
 ]
+
+
 
 
