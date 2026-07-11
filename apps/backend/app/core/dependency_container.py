@@ -351,6 +351,7 @@ def register_ai_gateway_dependencies() -> None:
     from app.ai.registry import ModelRegistry, ProviderRegistry
     from app.core.config import settings
 
+    # Legacy Setup
     provider_registry = ProviderRegistry()
     model_registry = ModelRegistry()
     cost_estimator = CostEstimator(model_registry)
@@ -379,6 +380,60 @@ def register_ai_gateway_dependencies() -> None:
     )
     container.register(
         AiGatewayService, SingletonProvider(lambda: ai_gateway)
+    )
+
+    # Enterprise AI Gateway V2 Setup
+    from app.ai.gateway import (
+        AIGateway,
+        ProviderRegistry as ProviderRegistryV2,
+        ModelRegistry as ModelRegistryV2,
+        ProviderFactory,
+        RetryPolicy,
+        TimeoutPolicy,
+    )
+    from app.ai.providers.ollama import OllamaConfig, OllamaClient, OllamaProvider
+    from app.ai.models import AIModelInfo, ModelType, ProviderCapability
+
+    prov_registry_v2 = ProviderRegistryV2()
+    model_registry_v2 = ModelRegistryV2()
+
+    # Register default Ollama model in ModelRegistryV2
+    model_registry_v2.register_model(
+        AIModelInfo(
+            name="llama3",
+            type=ModelType.TEXT,
+            context_window=2048,
+            max_output_tokens=500,
+            capabilities=[ProviderCapability.CHAT, ProviderCapability.EMBEDDINGS],
+        ),
+        is_default=True,
+    )
+
+    ollama_config = OllamaConfig()
+    ollama_client = OllamaClient(ollama_config)
+    ollama_provider = OllamaProvider(ollama_config, ollama_client)
+    prov_registry_v2.register("ollama", ollama_provider)
+
+    factory_v2 = ProviderFactory(prov_registry_v2)
+    retry_v2 = RetryPolicy()
+    timeout_v2 = TimeoutPolicy()
+
+    ai_gateway_v2 = AIGateway(
+        provider_registry=prov_registry_v2,
+        model_registry=model_registry_v2,
+        factory=factory_v2,
+        retry_policy=retry_v2,
+        timeout_policy=timeout_v2,
+    )
+
+    container.register(
+        ProviderRegistryV2, SingletonProvider(lambda: prov_registry_v2)
+    )
+    container.register(
+        ModelRegistryV2, SingletonProvider(lambda: model_registry_v2)
+    )
+    container.register(
+        AIGateway, SingletonProvider(lambda: ai_gateway_v2)
     )
 
 
