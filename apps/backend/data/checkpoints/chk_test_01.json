@@ -1,0 +1,14 @@
+{
+  "checkpoint_id": "chk_11898d9a96",
+  "mission_id": "chk_test_01",
+  "goal": "Test checkpointing",
+  "completed_step_ids": [
+    "s1"
+  ],
+  "step_outputs": {},
+  "shared_context": {
+    "test_key": "val"
+  },
+  "state": "pending",
+  "timestamp": "2026-07-31T16:49:07.936548"
+}

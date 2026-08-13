@@ -1,0 +1,82 @@
+"""Enterprise Workspace, Team Collaboration & Remote AI Orchestration Platform package.
+
+Exposes configuration, models, interfaces, exceptions, managers, collaboration, remote execution, sync, search,
+backup/restore, observability, and UniversalWorkspaceEngine.
+"""
+
+import sys
+from typing import Any
+from app.ai.workspace.utils import lazy_import
+
+__all__ = [
+    "WorkspaceConfiguration",
+    "WorkspaceType",
+    "MemberRole",
+    "DeviceStatus",
+    "SyncStatus",
+    "WorkspaceMember",
+    "WorkspaceDevice",
+    "WorkspaceDefinition",
+    "RemoteExecutionRequest",
+    "RemoteExecutionResult",
+    "WorkspaceSearchResult",
+    "WorkspaceHealth",
+    "WorkspaceMetrics",
+    "IWorkspaceManager",
+    "ICollaborationEngine",
+    "IRemoteExecutionEngine",
+    "ISyncEngine",
+    "IWorkspaceSearch",
+    "IWorkspaceManagerFacade",
+    "IUniversalWorkspaceEngine",
+    "WorkspaceError",
+    "PermissionDeniedError",
+    "RemoteExecutionError",
+    "SyncConflictError",
+    "WorkspaceNotFoundError",
+    "WorkspaceManager",
+    "OrganizationManager",
+    "TeamManager",
+    "MemberManager",
+    "RoleManager",
+    "PermissionManager",
+    "WorkspaceMemory",
+    "WorkspaceContext",
+    "KnowledgeSync",
+    "SharedWorkflows",
+    "SharedSkills",
+    "SharedPlugins",
+    "SharedModels",
+    "SharedDocuments",
+    "SharedProjects",
+    "SharedMissions",
+    "TaskAssignment",
+    "CollaborationEngine",
+    "PresenceManager",
+    "NotificationCenter",
+    "ActivityFeed",
+    "AuditEngine",
+    "SecurityEngine",
+    "RemoteAgentManager",
+    "RemoteExecution",
+    "DeviceManager",
+    "SessionManager",
+    "SyncEngine",
+    "ConflictResolver",
+    "WorkspaceSearch",
+    "WorkspaceBackup",
+    "WorkspaceRestore",
+    "WorkspaceExport",
+    "WorkspaceImport",
+    "RecommendationEngine",
+    "WorkspaceMetricsTracker",
+    "WorkspaceHealthMonitor",
+    "WorkspaceCache",
+    "MockWorkspaceProvider",
+    "WorkspaceManagerFacade",
+    "UniversalWorkspaceEngine",
+]
+
+
+def __getattr__(name: str) -> Any:
+    return lazy_import(name)

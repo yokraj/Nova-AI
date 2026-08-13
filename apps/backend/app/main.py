@@ -153,6 +153,41 @@ async def conversation_exception_handler(request: Request, exc: ConversationExce
         }
     )
 
+from app.dashboard.exceptions import (
+    DashboardException,
+    DashboardNotFoundError,
+    NotificationNotFoundError,
+    MetricNotFoundError,
+    HealthRecordNotFoundError,
+    EventNotFoundError,
+    ConfigurationNotFoundError,
+)
+
+async def dashboard_exception_handler(request: Request, exc: DashboardException) -> JSONResponse:
+    if isinstance(
+        exc,
+        (
+            DashboardNotFoundError,
+            NotificationNotFoundError,
+            MetricNotFoundError,
+            HealthRecordNotFoundError,
+            EventNotFoundError,
+            ConfigurationNotFoundError,
+        ),
+    ):
+        code = status.HTTP_404_NOT_FOUND
+    else:
+        code = status.HTTP_400_BAD_REQUEST
+
+    return JSONResponse(
+        status_code=code,
+        content={
+            "error": exc.__class__.__name__,
+            "message": str(exc),
+        },
+    )
+
+app.add_exception_handler(DashboardException, dashboard_exception_handler)
 app.add_exception_handler(ConversationException, conversation_exception_handler)
 app.add_exception_handler(ApplicationException, application_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
@@ -161,8 +196,19 @@ app.add_exception_handler(Exception, global_exception_handler)
 # Register all request pipelines, CORS configurations, security, and gzip filters
 register_middleware(app)
 
-# Register central routers (System status, API v1, etc.)
+from app.security import DashboardSecurityMiddleware
+app.add_middleware(DashboardSecurityMiddleware)
+
+# Register central routers (System status, API v1, Dashboard, etc.)
 app.include_router(api_router)
+
+from app.dashboard.routes import router as dashboard_router
+from app.dashboard.websocket import router as dashboard_ws_router
+from app.websocket.router import router as gateway_ws_router
+
+app.include_router(dashboard_router)
+app.include_router(dashboard_ws_router)
+app.include_router(gateway_ws_router)
 
 
 @app.get("/", tags=["system"])

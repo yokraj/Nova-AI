@@ -1,0 +1,23 @@
+{
+  "checkpoint_id": "chk_4ff1227264",
+  "mission_id": "ms_gw_exec_01",
+  "goal": "Gateway mission test",
+  "completed_step_ids": [],
+  "step_outputs": {
+    "step_gw_1": {
+      "status": "healthy",
+      "python_version": "3.14"
+    }
+  },
+  "shared_context": {
+    "shared": {},
+    "step_outputs": {
+      "step_gw_1": {
+        "status": "healthy",
+        "python_version": "3.14"
+      }
+    }
+  },
+  "state": "paused",
+  "timestamp": "2026-07-31T16:49:14.460559"
+}

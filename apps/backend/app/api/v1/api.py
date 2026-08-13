@@ -25,3 +25,43 @@ from app.automation import workflows_router
 
 router.include_router(workflows_router)
 
+# Mount enterprise memory endpoints
+from app.memory.api import router as memory_router
+
+router.include_router(memory_router)
+
+# Mount enterprise vector engine endpoints
+from app.vector_memory.api import router as vector_router
+
+router.include_router(vector_router)
+
+# Mount enterprise hybrid RAG endpoints
+from app.rag.api import router as rag_router
+
+router.include_router(rag_router)
+
+# Mount enterprise knowledge graph endpoints
+from app.knowledge_graph.api import router as graph_router
+
+router.include_router(graph_router)
+
+# Mount enterprise code intelligence endpoints
+from app.code_intelligence.api import router as code_router
+
+router.include_router(code_router)
+
+# Mount enterprise context engine endpoints
+from app.context_engine.api import router as context_router
+
+router.include_router(context_router)
+
+# Mount enterprise platform validation endpoints
+from app.platform_validation.api import router as validation_router
+
+router.include_router(validation_router)
+
+# Mount enterprise inference gateway endpoints
+from app.inference.api import router as inference_router
+
+router.include_router(inference_router)
+

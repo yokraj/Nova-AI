@@ -20,6 +20,16 @@ from app.database.models import (
     Session,
     UserPreference,
     AIProviderConfiguration,
+    DashboardSnapshot,
+    SystemMetric,
+    ResourceMetric,
+    GPUMetric,
+    ProcessMetric,
+    DashboardEvent,
+    DashboardNotification,
+    AnalyticsRecord,
+    HealthRecord,
+    DashboardConfiguration,
 )
 
 # Retrieve Alembic Config object

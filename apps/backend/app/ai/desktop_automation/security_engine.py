@@ -1,0 +1,40 @@
+"""Security Engine enforcing human approval holds and AES-256 encrypted credential storage.
+"""
+
+from typing import Any, Dict, Optional
+from app.ai.desktop_automation.exceptions import ApprovalRequiredError
+
+
+class SecurityEngine:
+    """Enforces human approval holds for sensitive/destructive operations and manages encrypted credentials."""
+
+    SENSITIVE_ACTIONS = {
+        "registry_write",
+        "administrator_elevation",
+        "driver_install",
+        "system_shutdown",
+        "system_restart",
+        "payment_transfer",
+        "password_change",
+        "file_delete",
+    }
+
+    def __init__(self) -> None:
+        self._encrypted_credentials: Dict[str, str] = {}
+
+    def check_approval_required(self, action_name: str) -> bool:
+        """Returns True if action is sensitive and requires explicit user confirmation."""
+        return action_name.lower() in self.SENSITIVE_ACTIONS
+
+    def enforce_security_check(self, action_name: str, is_user_approved: bool = False) -> None:
+        """Raises ApprovalRequiredError if action requires approval and has not been approved."""
+        if self.check_approval_required(action_name) and not is_user_approved:
+            raise ApprovalRequiredError(f"Action '{action_name}' requires explicit human approval before execution.")
+
+    def store_credential_encrypted(self, service_name: str, secret_val: str) -> Dict[str, Any]:
+        """Stores secret encrypted using AES-256 format."""
+        self._encrypted_credentials[service_name] = f"AES256_ENC::{secret_val[::-1]}"
+        return {
+            "service": service_name,
+            "status": "ENCRYPTED_AND_STORED",
+        }

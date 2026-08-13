@@ -14,6 +14,7 @@ class UserPreference(BaseEntity):
     """UserPreference entity tracking structured UI or logic settings mappings."""
 
     __tablename__ = "user_preferences"
+    __table_args__ = {"extend_existing": True}
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True

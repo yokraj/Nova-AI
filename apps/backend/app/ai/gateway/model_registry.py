@@ -13,15 +13,16 @@ class ModelRegistry:
         self._models: Dict[str, AIModelInfo] = {}
         self._default_model: Optional[str] = None
 
-    def register_model(self, model: AIModelInfo, is_default: bool = False) -> None:
+    def register_model(self, model: AIModelInfo, is_default: bool = False, bypass_default: bool = False) -> None:
         """Registers a new model capability configuration.
 
         Args:
             model: AIModelInfo details.
             is_default: If true, sets this model as default.
+            bypass_default: If true, prevents setting as default if registry is empty.
         """
         self._models[model.name] = model
-        if is_default or not self._default_model:
+        if is_default or (not self._default_model and not bypass_default):
             self._default_model = model.name
 
     def model(self, name: str) -> Optional[AIModelInfo]:

@@ -1,0 +1,23 @@
+export type FileSystemOperationType =
+  | 'READ_DIRECTORY'
+  | 'GET_FILE_INFO'
+  | 'SEARCH_FILES'
+  | 'SEARCH_DIRECTORIES'
+  | 'CREATE_FILE'
+  | 'CREATE_DIRECTORY'
+  | 'COPY_FILE'
+  | 'COPY_DIRECTORY'
+  | 'MOVE_FILE'
+  | 'MOVE_DIRECTORY'
+  | 'RENAME_FILE'
+  | 'RENAME_DIRECTORY'
+  | 'DELETE_FILE'
+  | 'DELETE_DIRECTORY'
+  | 'READ_TEXT_FILE'
+  | 'WRITE_TEXT_FILE'
+  | 'CHECK_EXISTS'
+  | 'GET_FILE_SIZE'
+  | 'GET_DIRECTORY_SIZE'
+  | 'FIND_DUPLICATES';
+
+export type CollisionPolicy = 'OVERWRITE' | 'SKIP' | 'RENAME' | 'ASK_USER';

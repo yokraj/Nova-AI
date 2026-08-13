@@ -18,3 +18,4 @@ class SoftwareCapability(str, Enum):
     EXPLAIN_CODE = "ExplainCode"
     DEBUG = "Debug"
     WORKSPACE_MANAGEMENT = "WorkspaceManagement"
+    AUTONOMOUS_EXECUTION = "AutonomousExecution"

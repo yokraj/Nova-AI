@@ -1,0 +1,42 @@
+{
+  "checkpoint_id": "chk_36b7d49675",
+  "mission_id": "ms_v_9e99eddf",
+  "goal": "summarize today's PDF and email to John",
+  "completed_step_ids": [
+    "step_afe8a7c9",
+    "step_81b73302"
+  ],
+  "step_outputs": {
+    "step_afe8a7c9": {
+      "summary": "Summary of 'document.pdf': Standard document with technical specifications.",
+      "page_count": 5
+    },
+    "step_81b73302": {
+      "status": "sent",
+      "to": "john@example.com",
+      "subject": "PDF Summary"
+    }
+  },
+  "shared_context": {
+    "shared": {
+      "summary": "Summary of 'document.pdf': Standard document with technical specifications.",
+      "page_count": 5,
+      "status": "sent",
+      "to": "john@example.com",
+      "subject": "PDF Summary"
+    },
+    "step_outputs": {
+      "step_afe8a7c9": {
+        "summary": "Summary of 'document.pdf': Standard document with technical specifications.",
+        "page_count": 5
+      },
+      "step_81b73302": {
+        "status": "sent",
+        "to": "john@example.com",
+        "subject": "PDF Summary"
+      }
+    }
+  },
+  "state": "paused",
+  "timestamp": "2026-07-31T17:00:27.234985"
+}

@@ -1,0 +1,14 @@
+export type AgentState =
+  | 'IDLE'
+  | 'UNDERSTANDING'
+  | 'PLANNING'
+  | 'AWAITING_APPROVAL'
+  | 'EXECUTING'
+  | 'OBSERVING'
+  | 'VERIFYING'
+  | 'RECOVERING'
+  | 'REPLANNING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'TIMED_OUT';

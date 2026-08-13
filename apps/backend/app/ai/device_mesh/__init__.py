@@ -1,0 +1,82 @@
+"""Universal Device Mesh, Edge AI & Cross-Platform Orchestration Platform package.
+
+Exposes configuration, models, interfaces, exceptions, registry, discovery, pairing, GPU allocation, distributed scheduling,
+failover, managers, observability, and UniversalDeviceMeshEngine.
+"""
+
+import sys
+from typing import Any
+from app.ai.device_mesh.utils import lazy_import
+
+__all__ = [
+    "DeviceMeshConfiguration",
+    "DeviceOSType",
+    "MeshNodeStatus",
+    "GpuTaskCategory",
+    "MeshNodeDevice",
+    "GpuAllocationRequest",
+    "GpuAllocationResult",
+    "DistributedTaskRequest",
+    "DistributedTaskResult",
+    "MeshNetworkStatus",
+    "DeviceMeshHealth",
+    "DeviceMeshMetrics",
+    "IDeviceRegistry",
+    "IGpuAllocator",
+    "IDistributedScheduler",
+    "IAutomaticFailover",
+    "IDeviceMeshManagerFacade",
+    "IUniversalDeviceMeshEngine",
+    "DeviceMeshError",
+    "DeviceNotFoundError",
+    "DevicePairingError",
+    "GpuAllocationError",
+    "MeshNodeUnreachableError",
+    "DeviceRegistry",
+    "DeviceDiscovery",
+    "DevicePairing",
+    "DeviceHealth",
+    "DeviceProfiles",
+    "ConnectionManager",
+    "SecureChannel",
+    "MeshAuthentication",
+    "MeshAuthorization",
+    "HeartbeatManager",
+    "MeshNetwork",
+    "DistributedScheduler",
+    "TaskRouter",
+    "ResourceAllocator",
+    "GpuAllocator",
+    "StorageManager",
+    "RuntimeDispatcher",
+    "ModelDispatcher",
+    "ContainerManager",
+    "DockerManager",
+    "WslManager",
+    "VmManager",
+    "LinuxManager",
+    "WindowsManager",
+    "AndroidManager",
+    "RaspberryManager",
+    "EdgeRuntime",
+    "OfflineSync",
+    "NetworkMonitor",
+    "BandwidthOptimizer",
+    "FaultDetector",
+    "AutomaticFailover",
+    "CheckpointReplication",
+    "DeviceBackup",
+    "DeviceRestore",
+    "TelemetryEngine",
+    "RecommendationEngine",
+    "DeviceMeshMetricsTracker",
+    "DeviceMeshHealthMonitor",
+    "DeviceMeshCache",
+    "MockDeviceMeshProvider",
+    "DeviceMeshManagerFacade",
+    "UniversalDeviceMeshEngine",
+]
+
+
+def __getattr__(name: str) -> Any:
+    return lazy_import(name)

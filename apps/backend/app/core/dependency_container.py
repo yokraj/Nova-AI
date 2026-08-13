@@ -384,6 +384,7 @@ def register_ai_gateway_dependencies() -> None:
 
     # Enterprise AI Gateway V2 Setup
     from app.ai.gateway import (
+        IAIGateway,
         AIGateway,
         ProviderRegistry as ProviderRegistryV2,
         ModelRegistry as ModelRegistryV2,
@@ -407,6 +408,42 @@ def register_ai_gateway_dependencies() -> None:
             capabilities=[ProviderCapability.CHAT, ProviderCapability.EMBEDDINGS],
         ),
         is_default=True,
+    )
+    model_registry_v2.register_model(
+        AIModelInfo(
+            name="qwen2.5-coder",
+            type=ModelType.TEXT,
+            context_window=32768,
+            max_output_tokens=4096,
+            capabilities=[ProviderCapability.CHAT],
+        )
+    )
+    model_registry_v2.register_model(
+        AIModelInfo(
+            name="deepseek-r1-distill-qwen",
+            type=ModelType.TEXT,
+            context_window=16384,
+            max_output_tokens=4096,
+            capabilities=[ProviderCapability.CHAT],
+        )
+    )
+    model_registry_v2.register_model(
+        AIModelInfo(
+            name="nomic-embed-text",
+            type=ModelType.TEXT,
+            context_window=8192,
+            max_output_tokens=0,
+            capabilities=[ProviderCapability.EMBEDDINGS],
+        )
+    )
+    model_registry_v2.register_model(
+        AIModelInfo(
+            name="qwen2.5-vl",
+            type=ModelType.MULTIMODAL,
+            context_window=16384,
+            max_output_tokens=4096,
+            capabilities=[ProviderCapability.VISION],
+        )
     )
 
     ollama_config = OllamaConfig()
@@ -434,6 +471,9 @@ def register_ai_gateway_dependencies() -> None:
     )
     container.register(
         AIGateway, SingletonProvider(lambda: ai_gateway_v2)
+    )
+    container.register(
+        IAIGateway, SingletonProvider(lambda: ai_gateway_v2)
     )
 
 
