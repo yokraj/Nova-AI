@@ -12,7 +12,7 @@ export class VisualTargetResolver {
 
       const labelMatch = target.label.toLowerCase().includes(clean);
       const textMatch = target.text ? target.text.toLowerCase().includes(clean) : false;
-      const typeMatch = clean.includes(target.type.toLowerCase());
+      const typeMatch = target.type.toLowerCase() === clean;
 
       if (labelMatch || textMatch || typeMatch) {
         return target;

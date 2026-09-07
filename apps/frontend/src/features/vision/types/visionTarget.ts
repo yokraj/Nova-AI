@@ -28,8 +28,12 @@ export interface VisionTarget {
   label: string;
   confidence: number;
   boundingBox?: BoundingBox;
+  center?: { x: number; y: number };
   text?: string;
   application?: string;
   windowTitle?: string;
   actionable: boolean;
+  clickable?: boolean;
+  source?: 'REAL_OCR_WIN32' | 'LOCAL_VISION_MODEL' | 'SYSTEM_CAPTURE';
+  timestamp?: string;
 }

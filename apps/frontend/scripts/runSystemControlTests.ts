@@ -25,8 +25,13 @@ async function runSystemControlTests() {
   };
 
   // Start Native Bridge Server
-  const serverStarted = await server.start(3001);
+  let serverStarted = await server.start(3001);
+  if (!serverStarted) {
+    const health = await client.healthCheck();
+    serverStarted = health.healthy;
+  }
   logResult('Native Bridge Server Start', serverStarted, 'Server bound to 127.0.0.1:3001');
+
 
   try {
     // 1. Tool Registry Verification

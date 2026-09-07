@@ -6,6 +6,12 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 import time
 import uuid
+from app.ai.desktop_automation.models import (
+    ApplicationContext,
+    AutomationAction,
+    AutomationResult,
+    VerificationResult,
+)
 
 
 class ProjectLanguage(str, Enum):
@@ -233,3 +239,40 @@ class CopilotHealth(BaseModel):
     active_projects_count: int = Field(0)
     loaded_engines: List[str] = Field(default_factory=list)
     timestamp: float = Field(default_factory=time.time)
+
+
+class CopilotMode(str, Enum):
+    """Enumerate AI Software Copilot interaction modes."""
+
+    EXPLAIN = "explain"
+    GUIDE = "guide"
+    EXECUTE = "execute"
+
+
+class CopilotRequest(BaseModel):
+    """Payload for Copilot request."""
+
+    request_id: str = Field(default_factory=lambda: f"cpreq_{uuid.uuid4().hex[:8]}")
+    user_prompt: str = Field(...)
+    mode: CopilotMode = Field(CopilotMode.EXPLAIN)
+    target_app: Optional[str] = Field(None)
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+
+
+class CopilotResponse(BaseModel):
+    """Response outcome from Copilot request."""
+
+    request_id: str = Field(...)
+    mode: CopilotMode = Field(...)
+    app_context: ApplicationContext
+    explanation: Optional[str] = Field(None)
+    guide_steps: List[Dict[str, Any]] = Field(default_factory=list)
+    action_plan: List[AutomationAction] = Field(default_factory=list)
+    execution_results: List[AutomationResult] = Field(default_factory=list)
+    verification_results: List[VerificationResult] = Field(default_factory=list)
+    retrieved_memory_context: Optional[str] = Field(None)
+    success: bool = Field(True)
+    status_message: str = Field("Copilot request completed successfully.")
+    timestamp: float = Field(default_factory=time.time)
+
+

@@ -25,8 +25,9 @@ from app.ai.agents.voice_orchestrator import VoiceAgentOrchestrator
 class UniversalAgentWorkforceManager:
     """Consolidated manager for Nova Autonomous AI Company orchestrating 68 specialized agents across 9 divisions."""
 
-    def __init__(self, config: Optional[WorkforceConfiguration] = None) -> None:
+    def __init__(self, config: Optional[WorkforceConfiguration] = None, memory_engine: Optional[Any] = None) -> None:
         self.config = config or WorkforceConfiguration()
+        self.memory_engine = memory_engine
         self.message_bus = AgentMessageBus()
         self.delegation_engine = TaskDelegationEngine()
         self.peer_review_engine = PeerReviewEngine()
@@ -34,9 +35,22 @@ class UniversalAgentWorkforceManager:
         self.learning_engine = AgentLearningEngine()
         self.voice_orchestrator = VoiceAgentOrchestrator(self.delegation_engine, self.peer_review_engine)
         self.dashboard_runtime = WorkforceDashboardRuntime()
-
         self._all_agents: List[AgentBlueprint] = []
         self._register_all_divisions()
+
+    @property
+    def event_bus(self) -> Any:
+        return self.message_bus
+
+    @property
+    def registry(self) -> Any:
+        return self
+
+    def get_agent(self, agent_id: str) -> Optional[AgentBlueprint]:
+        for agent in self._all_agents:
+            if agent.agent_id == agent_id:
+                return agent
+        return None
 
     def _register_all_divisions(self) -> None:
         self._all_agents.extend(ExecutiveDivision.get_agents())
@@ -64,3 +78,7 @@ class UniversalAgentWorkforceManager:
                 active_agents_count=12,
             ),
         )
+
+
+AgentManager = UniversalAgentWorkforceManager
+

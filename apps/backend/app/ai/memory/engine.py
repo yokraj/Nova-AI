@@ -1,7 +1,7 @@
 """Main Local RAG Memory Engine orchestrator.
 """
 
-from typing import Optional, List
+from typing import Optional, List, Any
 from uuid import UUID
 from app.ai.memory.models import MemoryItem, MemoryType, ContextPackage
 from app.ai.memory.configuration import MemoryConfiguration
@@ -17,7 +17,11 @@ from app.ai.memory.code_memory import CodeMemory
 class LocalMemoryEngine:
     """Combines embedding generators, vector databases (PGVector or FAISS), indexers, and retrieval pipelines."""
 
-    def __init__(self, config: Optional[MemoryConfiguration] = None) -> None:
+    def __init__(
+        self,
+        config: Optional[MemoryConfiguration] = None,
+        graph_engine: Optional[Any] = None,
+    ) -> None:
         self.config = config or MemoryConfiguration()
         self.embedding_mgr = EmbeddingManager(model_name=self.config.embedding_model)
 
@@ -36,6 +40,16 @@ class LocalMemoryEngine:
         self.indexer = MemoryIndexer(self.store, self.embedding_mgr)
         self.retriever = RetrievalEngine(self.store, self.embedding_mgr)
         
+        # Knowledge Graph Integration
+        if graph_engine is not None:
+            self.graph_engine = graph_engine
+        else:
+            try:
+                from app.knowledge_graph.engine import KnowledgeGraphEngine
+                self.graph_engine = KnowledgeGraphEngine(storage_path=self.config.storage_path)
+            except Exception:
+                self.graph_engine = None
+
         # Specialized engines
         self.conversation = ConversationMemory(self.store, self.embedding_mgr)
         self.project = ProjectMemory(self.store, self.embedding_mgr)
@@ -57,13 +71,37 @@ class LocalMemoryEngine:
         await self.store.add([item])
         return item.id
 
-    async def retrieve_context(self, query: str, limit: int = 5) -> ContextPackage:
+    async def retrieve_graph_context(self, query: str) -> str:
+        """Queries KnowledgeGraphEngine for query-relevant graph context."""
+        if not self.graph_engine:
+            return ""
+        try:
+            if hasattr(self.graph_engine, "query_relevant_graph"):
+                return await self.graph_engine.query_relevant_graph(query)
+            return ""
+        except Exception:
+            return ""
+
+    async def retrieve_context(self, query: str, limit: int = 5, threshold: Optional[float] = None) -> ContextPackage:
         """Retrieves and segments contexts matching query."""
-        return await self.retriever.retrieve_context(
-            query,
-            limit=limit,
-            threshold=self.config.similarity_threshold
-        )
+        thresh = threshold if threshold is not None else self.config.similarity_threshold
+        try:
+            pkg = await self.retriever.retrieve_context(
+                query,
+                limit=limit,
+                threshold=thresh
+            )
+        except Exception as e:
+            pkg = ContextPackage()
+
+        # RAG + Knowledge Graph Fusion
+        try:
+            graph_ctx = await self.retrieve_graph_context(query)
+            pkg.graph_context = graph_ctx
+        except Exception:
+            pkg.graph_context = ""
+
+        return pkg
 
     async def count_memories(self) -> int:
         """Returns size of registered memories index."""

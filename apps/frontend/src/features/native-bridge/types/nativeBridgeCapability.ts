@@ -3,11 +3,13 @@ export type NativeBridgeCapabilityType =
   | 'FILE_SYSTEM'
   | 'SYSTEM_CONTROL'
   | 'COMPUTER_CONTROL'
+  | 'INPUT_CONTROL'
   | 'BROWSER_CDP';
 
 export type NativeApplicationAction =
   | 'OPEN_APPLICATION'
-  | 'VERIFY_APPLICATION_RUNNING';
+  | 'VERIFY_APPLICATION_RUNNING'
+  | 'CLOSE_APPLICATION';
 
 export type NativeFileSystemAction =
   | 'READ_DIRECTORY'
@@ -53,7 +55,10 @@ export type NativeSystemAction =
   | 'LIST_PROCESSES'
   | 'FIND_PROCESS'
   | 'TERMINATE_PROCESS'
-  | 'CAPTURE_SCREENSHOT';
+  | 'CAPTURE_SCREENSHOT'
+  | 'GET_ACTIVE_WINDOW'
+  | 'CLIPBOARD_SET'
+  | 'CLIPBOARD_GET';
 
 export type NativeComputerAction =
   | 'MOUSE_MOVE'
@@ -62,10 +67,11 @@ export type NativeComputerAction =
   | 'MOUSE_RIGHT_CLICK'
   | 'MOUSE_SCROLL'
   | 'KEYBOARD_TYPE'
+  | 'KEYBOARD_SEND'
   | 'KEYBOARD_PRESS'
   | 'KEYBOARD_COMBINATION'
-  | 'WINDOW_LIST'
   | 'WINDOW_GET_ACTIVE'
+  | 'WINDOW_LIST'
   | 'WINDOW_FOCUS'
   | 'WINDOW_MINIMIZE'
   | 'WINDOW_MAXIMIZE'

@@ -92,3 +92,21 @@ class IAutomationRuntime(ABC):
     @abstractmethod
     def check_health(self) -> AutomationHealth:
         pass
+
+
+class AutomationProvider(ABC):
+    """Abstract contract for low-level automation providers."""
+
+    @abstractmethod
+    async def execute_action(self, action_name: str, parameters: Dict[str, Any]) -> AutomationResult:
+        pass
+
+
+class ActionExecutor(ABC):
+    """Abstract contract for action execution."""
+
+    @abstractmethod
+    async def execute(self, action_name: str, parameters: Dict[str, Any]) -> AutomationResult:
+        pass
+
+

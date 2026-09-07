@@ -9,3 +9,7 @@ class RuntimeCache(BaseRuntimeCache):
     """Runtime Cache wrapper."""
 
     pass
+
+
+LocalInferenceCache = RuntimeCache
+

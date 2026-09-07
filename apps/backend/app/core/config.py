@@ -60,11 +60,19 @@ class Settings(BaseSettings):
             return v
         return []
 
+    # SQLite Database Fallback Path
+    SQLITE_DB_PATH: str = "./data/nova_ai.db"
+    USE_SQLITE_FALLBACK: bool = True
+
     @property
     def get_database_url(self) -> str:
-        """Constructs or returns the async PostgreSQL connection URL."""
+        """Constructs or returns the async PostgreSQL or SQLite connection URL."""
         if self.DATABASE_URL:
             return self.DATABASE_URL
+        if self.USE_SQLITE_FALLBACK:
+            import os
+            os.makedirs("./data", exist_ok=True)
+            return f"sqlite+aiosqlite:///{self.SQLITE_DB_PATH}"
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

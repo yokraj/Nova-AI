@@ -7,15 +7,15 @@ import StatusBar from './StatusBar';
 
 export const AppLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
-  const [rightPanelOpen, setRightPanelOpen] = useState<boolean>(true);
+  const [rightPanelOpen, setRightPanelOpen] = useState<boolean>(false);
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden">
-      {/* Top Navigation */}
+    <div className="min-h-screen max-h-screen w-full flex flex-col bg-black text-slate-100 overflow-hidden font-sans">
+      {/* Top Navigation Header */}
       <TopNavigation onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)} />
 
-      {/* Center Layout Area */}
-      <div className="flex-1 flex overflow-hidden relative">
+      {/* Center Layout Workspace */}
+      <div className="flex-1 flex min-w-0 overflow-hidden relative bg-black">
         {/* Left Sidebar */}
         <Sidebar
           collapsed={sidebarCollapsed}
@@ -25,7 +25,7 @@ export const AppLayout: React.FC = () => {
         {/* Main Workspace (Outlet Page Content) */}
         <MainWorkspace />
 
-        {/* Right Inspection Panel */}
+        {/* Inspection Slide-Over Right Panel */}
         <RightPanel isOpen={rightPanelOpen} onClose={() => setRightPanelOpen(false)} />
       </div>
 

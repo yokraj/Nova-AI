@@ -5,7 +5,9 @@ import { cn } from '@/utils/cn';
 
 interface MissionApprovalGateProps {
   isOpen: boolean;
-  taskTitle: string;
+  taskTitle?: string;
+  missionTitle?: string;
+  toolName?: string;
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
   reason: string;
   onApprove: () => void;
@@ -16,6 +18,8 @@ interface MissionApprovalGateProps {
 export const MissionApprovalGate: React.FC<MissionApprovalGateProps> = ({
   isOpen,
   taskTitle,
+  missionTitle,
+  toolName,
   riskLevel,
   reason,
   onApprove,
@@ -23,6 +27,8 @@ export const MissionApprovalGate: React.FC<MissionApprovalGateProps> = ({
   className,
 }) => {
   if (!isOpen) return null;
+
+  const displayTitle = taskTitle || missionTitle || 'Pending High-Risk Step';
 
   return (
     <AnimatePresence>
@@ -45,7 +51,8 @@ export const MissionApprovalGate: React.FC<MissionApprovalGateProps> = ({
 
           <div className="space-y-1">
             <div className="text-[10px] text-slate-400 uppercase font-bold">Pending Operation</div>
-            <h4 className="text-sm font-bold font-sans text-slate-100">{taskTitle}</h4>
+            <h4 className="text-sm font-bold font-sans text-slate-100">{displayTitle}</h4>
+            {toolName && <div className="text-[11px] text-cyan-400 font-mono">Tool: {toolName}</div>}
           </div>
 
           <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 space-y-1">
@@ -59,16 +66,16 @@ export const MissionApprovalGate: React.FC<MissionApprovalGateProps> = ({
           <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-800">
             <button
               onClick={onReject}
-              className="px-4 py-2 rounded-xl bg-slate-900 text-slate-300 hover:text-rose-300 border border-slate-800 font-bold transition-all cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-slate-100 font-bold cursor-pointer transition-all"
             >
-              Reject
+              Reject Action
             </button>
             <button
               onClick={onApprove}
-              className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold transition-all cursor-pointer flex items-center space-x-1"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 font-bold flex items-center space-x-1.5 shadow-[0_0_15px_rgba(245,158,11,0.3)] hover:scale-[1.02] cursor-pointer transition-all"
             >
               <Check className="w-4 h-4" />
-              <span>Approve Execution</span>
+              <span>Authorize & Resume</span>
             </button>
           </div>
         </motion.div>

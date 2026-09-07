@@ -71,6 +71,12 @@ class IModelRegistry(ABC):
         """Retrieves metadata by model ID."""
         pass
 
+    @abstractmethod
+    def find_best_model_for_category(self, category: ModelCategory) -> Optional[ModelMetadata]:
+        """Finds highest-priority model for given category."""
+        pass
+
+
 
 class IModelRouter(ABC):
     """Intelligent Model Router contract."""

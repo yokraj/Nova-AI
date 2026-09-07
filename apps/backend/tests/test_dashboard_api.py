@@ -36,7 +36,8 @@ from app.database.models.dashboard import (
     DashboardNotification,
     DashboardSnapshot,
 )
-from app.identity.infrastructure.rbac import get_current_user_claims
+from fastapi.security import HTTPAuthorizationCredentials
+from app.identity.infrastructure.rbac import get_current_user_claims, security_scheme
 from app.main import app
 
 # 1. Mock Admin Authorization Claims
@@ -45,6 +46,8 @@ def mock_admin_claims() -> Dict[str, str]:
 
 
 app.dependency_overrides[get_current_user_claims] = mock_admin_claims
+app.dependency_overrides[security_scheme] = lambda: HTTPAuthorizationCredentials(scheme="Bearer", credentials="mock_test_token")
+
 
 # In-memory test store
 _test_snapshots: Dict[uuid.UUID, DashboardSnapshot] = {}

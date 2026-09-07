@@ -1,0 +1,294 @@
+[
+  {
+    "name": "Read system info and check desktop",
+    "description": "Automated multi-step workflow learned for: \"Read system info and check desktop\"",
+    "purpose": "Read system info and check desktop",
+    "triggerPatterns": [
+      {
+        "naturalLanguagePattern": "Read system info and check desktop",
+        "intent": "system_inspection",
+        "confidence": 0.95
+      }
+    ],
+    "category": "system",
+    "status": "active",
+    "confidence": 0.9,
+    "source": "user_taught",
+    "owner": "NovaUser",
+    "requiredTools": [
+      "system.get_info",
+      "system.storage_status"
+    ],
+    "requiredCapabilities": [
+      "system"
+    ],
+    "requiredPermissions": [],
+    "preconditions": [
+      "Target system available"
+    ],
+    "variables": [],
+    "steps": [
+      {
+        "id": "step-1",
+        "order": 1,
+        "tool": "system.get_info",
+        "arguments": {},
+        "argumentTemplates": {},
+        "purpose": "Retrieve system telemetry",
+        "expectedObservation": "System info retrieved",
+        "verification": {
+          "type": "tool_result",
+          "expectedState": "verified"
+        },
+        "retryPolicy": {
+          "maxAttempts": 2,
+          "backoffMs": 1000
+        },
+        "approvalRequired": false
+      },
+      {
+        "id": "step-2",
+        "order": 2,
+        "tool": "system.storage_status",
+        "arguments": {},
+        "argumentTemplates": {},
+        "purpose": "Verify host disk status",
+        "expectedObservation": "Storage status verified",
+        "verification": {
+          "type": "tool_result",
+          "expectedState": "verified"
+        },
+        "retryPolicy": {
+          "maxAttempts": 2,
+          "backoffMs": 1000
+        },
+        "approvalRequired": false
+      }
+    ],
+    "verificationRules": [
+      "Verify state change after every tool execution step"
+    ],
+    "recoveryRules": [
+      "Use RecoveryEngine replanning on step failure"
+    ],
+    "constraints": [
+      "Respect ToolPermissionGuard and ExecutionBudget limits"
+    ],
+    "examples": [
+      "Read system info and check desktop"
+    ],
+    "tags": [
+      "system",
+      "learned_workflow"
+    ],
+    "dependencies": [],
+    "compatibility": {
+      "agentRuntimeVersion": "1.0.0"
+    },
+    "id": "skill-1786813629886-cp9te",
+    "version": 1,
+    "usageCount": 1,
+    "successRate": 1,
+    "createdAt": "2026-08-15T17:07:09.886Z",
+    "updatedAt": "2026-08-15T17:07:09.908Z",
+    "history": [
+      {
+        "version": 1,
+        "changes": "Initial skill creation",
+        "reason": "Initial creation from workflow learning engine",
+        "timestamp": "2026-08-15T17:07:09.886Z",
+        "successRate": 1,
+        "stepsCount": 2
+      }
+    ],
+    "lastUsedAt": "2026-08-15T17:07:09.908Z"
+  },
+  {
+    "name": "Auto Deploy F1.28 Persistent Stack",
+    "description": "Build Vite app and start FastAPI server",
+    "purpose": "Deploy production stack",
+    "triggerPatterns": [
+      {
+        "naturalLanguagePattern": "Auto Deploy F1.28 Persistent Stack",
+        "intent": "workflow_execution",
+        "confidence": 0.98
+      }
+    ],
+    "category": "automation",
+    "status": "active",
+    "confidence": 0.98,
+    "source": "user_taught",
+    "owner": "NovaAdmin",
+    "requiredTools": [
+      "filesystem.read_directory",
+      "system.get_info"
+    ],
+    "requiredCapabilities": [
+      "system"
+    ],
+    "requiredPermissions": [],
+    "preconditions": [
+      "System online"
+    ],
+    "variables": [
+      {
+        "name": "port",
+        "type": "number",
+        "description": "Port",
+        "required": true,
+        "defaultValue": "8000"
+      }
+    ],
+    "steps": [
+      {
+        "id": "step-1",
+        "order": 1,
+        "tool": "system.get_info",
+        "arguments": {},
+        "purpose": "Check hardware readiness"
+      }
+    ],
+    "verificationRules": [
+      "Verify server port open"
+    ],
+    "recoveryRules": [
+      "Restart server on failure"
+    ],
+    "constraints": [],
+    "examples": [
+      "Auto Deploy F1.28 Persistent Stack"
+    ],
+    "tags": [
+      "deploy",
+      "fastapi"
+    ],
+    "dependencies": [],
+    "compatibility": {
+      "agentRuntimeVersion": "1.0.0"
+    },
+    "id": "skill-1786813660214-ach46",
+    "version": 2,
+    "usageCount": 1,
+    "successRate": 1,
+    "createdAt": "2026-08-15T17:07:40.215Z",
+    "updatedAt": "2026-08-15T17:07:40.217Z",
+    "history": [
+      {
+        "version": 2,
+        "changes": "Optimized port check",
+        "reason": "Performance improvement",
+        "timestamp": "2026-08-15T17:07:40.216Z",
+        "successRate": 1,
+        "stepsCount": 1
+      },
+      {
+        "version": 1,
+        "changes": "Initial skill creation",
+        "reason": "Initial creation from workflow learning engine",
+        "timestamp": "2026-08-15T17:07:40.215Z",
+        "successRate": 1,
+        "stepsCount": 1
+      }
+    ],
+    "lastUsedAt": "2026-08-15T17:07:40.217Z"
+  },
+  {
+    "name": "Full-Stack Test Skill",
+    "description": "Automated multi-step workflow learned for: \"Full-Stack Test Skill\"",
+    "purpose": "Full-Stack Test Skill",
+    "triggerPatterns": [
+      {
+        "naturalLanguagePattern": "Full-Stack Test Skill",
+        "intent": "testing",
+        "confidence": 0.95
+      }
+    ],
+    "category": "filesystem",
+    "status": "active",
+    "confidence": 0.9,
+    "source": "user_taught",
+    "owner": "NovaUser",
+    "requiredTools": [
+      "filesystem.create_directory"
+    ],
+    "requiredCapabilities": [
+      "filesystem"
+    ],
+    "requiredPermissions": [],
+    "preconditions": [
+      "Target system available"
+    ],
+    "variables": [
+      {
+        "name": "targetPath",
+        "type": "path",
+        "description": "Target file or directory path",
+        "required": true,
+        "defaultValue": "c:/Projects/Nova-AI/apps/frontend/.nova_fs_test",
+        "examples": [
+          "c:/Projects/Nova-AI/apps/frontend/.nova_fs_test"
+        ]
+      }
+    ],
+    "steps": [
+      {
+        "id": "step-1",
+        "order": 1,
+        "tool": "filesystem.create_directory",
+        "arguments": {
+          "path": "c:/Projects/Nova-AI/apps/frontend/.nova_fs_test"
+        },
+        "argumentTemplates": {
+          "path": "{{targetPath}}"
+        },
+        "purpose": "Create directory",
+        "expectedObservation": "Directory created",
+        "verification": {
+          "type": "tool_result",
+          "expectedState": "verified"
+        },
+        "retryPolicy": {
+          "maxAttempts": 2,
+          "backoffMs": 1000
+        },
+        "approvalRequired": false
+      }
+    ],
+    "verificationRules": [
+      "Verify state change after every tool execution step"
+    ],
+    "recoveryRules": [
+      "Use RecoveryEngine replanning on step failure"
+    ],
+    "constraints": [
+      "Respect ToolPermissionGuard and ExecutionBudget limits"
+    ],
+    "examples": [
+      "Full-Stack Test Skill"
+    ],
+    "tags": [
+      "filesystem",
+      "learned_workflow"
+    ],
+    "dependencies": [],
+    "compatibility": {
+      "agentRuntimeVersion": "1.0.0"
+    },
+    "id": "skill-1786813677291-7xtie",
+    "version": 1,
+    "usageCount": 0,
+    "successRate": 1,
+    "createdAt": "2026-08-15T17:07:57.291Z",
+    "updatedAt": "2026-08-15T17:07:57.291Z",
+    "history": [
+      {
+        "version": 1,
+        "changes": "Initial skill creation",
+        "reason": "Initial creation from workflow learning engine",
+        "timestamp": "2026-08-15T17:07:57.291Z",
+        "successRate": 1,
+        "stepsCount": 1
+      }
+    ]
+  }
+]

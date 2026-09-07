@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { APP_CONFIG } from '@/config/app.config';
+import { APP_CONFIG } from '../config/app.config.js';
 
 export const apiClient = axios.create({
   baseURL: APP_CONFIG.apiBaseUrl,
@@ -10,9 +10,11 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('nova_auth_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    const token = localStorage.getItem('nova_auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });

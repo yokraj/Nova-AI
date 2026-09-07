@@ -49,4 +49,8 @@ export class ExecutionBudget {
   getMaxRetriesPerStep(): number {
     return this.config.maxRetriesPerStep;
   }
+
+  getRemainingSteps(): number {
+    return Math.max(0, this.config.maxSteps - this.currentStepCount);
+  }
 }

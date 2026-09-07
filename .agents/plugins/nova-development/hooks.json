@@ -1,0 +1,17 @@
+{
+  "nova-development-reminders": {
+    "enabled": true,
+    "PostToolUse": [
+      {
+        "matcher": "replace_file_content|multi_replace_file_content|write_to_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd /c echo [Nova Dev Plugin] File modification completed. Ensure relevant unit tests and security checks are executed before marking tasks complete.",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

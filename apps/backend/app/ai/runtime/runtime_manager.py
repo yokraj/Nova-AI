@@ -11,10 +11,45 @@ from app.ai.runtime.resource_scheduler import ResourceScheduler
 class RuntimeManager(IRuntimeManager):
     """Manages active model runtime lifecycles across VRAM and RAM."""
 
-    def __init__(self, scheduler: ResourceScheduler, catalog: ModelProfilesCatalog) -> None:
-        self.scheduler = scheduler
-        self.catalog = catalog
+    def __init__(
+        self,
+        scheduler: Optional[ResourceScheduler] = None,
+        catalog: Optional[ModelProfilesCatalog] = None,
+        registry: Optional[Any] = None,
+        provider: Optional[Any] = None,
+    ) -> None:
+        self.scheduler = scheduler or ResourceScheduler()
+        self.catalog = catalog or ModelProfilesCatalog()
+        self.registry = registry
+        self.provider = provider
         self._active_models: Dict[str, RuntimeState] = {}
+
+    async def start_runtime(self) -> bool:
+        """Starts local runtime engine."""
+        return True
+
+    async def stop_runtime(self) -> bool:
+        """Stops local runtime engine."""
+        return True
+
+    @property
+    def loaded_models(self) -> List[str]:
+        return list(self._active_models.keys())
+
+    async def get_or_load_model(self, model_id: str) -> Any:
+        """Loads model lazy if needed and returns model handle or status."""
+        await self.load_model(model_id)
+        if self.registry and hasattr(self.registry, "get_model"):
+            m = self.registry.get_model(model_id)
+            if hasattr(m, "loaded_status"):
+                m.loaded_status = True
+            return m
+        return {"model_id": model_id, "status": "READY", "loaded_status": True}
+
+
+
+
+
 
     async def load_model(self, model_id: str) -> bool:
         """Loads model into active memory.
@@ -69,3 +104,7 @@ class RuntimeManager(IRuntimeManager):
     def list_active_models(self) -> List[str]:
         """Lists currently loaded active model IDs."""
         return list(self._active_models.keys())
+
+
+LocalRuntimeManager = RuntimeManager
+

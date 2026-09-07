@@ -17,6 +17,7 @@ export class MockModelProvider implements ModelProvider {
       return {
         planId: `plan-${Date.now()}`,
         goal,
+        goalText: goal,
         steps: [
           {
             id: 'step-1',
@@ -82,10 +83,254 @@ export class MockModelProvider implements ModelProvider {
       };
     }
 
+    if (lower.includes('chrome') && lower.includes('python')) {
+      return {
+        planId: `plan-${Date.now()}`,
+        goal,
+        goalText: goal,
+        steps: [
+          {
+            id: 'step-1',
+            stepNumber: 1,
+            title: 'Launch Google Chrome',
+            description: 'Open Google Chrome browser',
+            status: 'PENDING',
+            toolCall: {
+              callId: 'call-1',
+              toolName: 'application.open',
+              arguments: { applicationName: 'Chrome' },
+              riskLevel: 'LOW',
+            },
+          },
+          {
+            id: 'step-2',
+            stepNumber: 2,
+            title: 'Navigate & Search for Python',
+            description: 'Search for Python in Chrome',
+            status: 'PENDING',
+            dependencies: ['step-1'],
+            toolCall: {
+              callId: 'call-2',
+              toolName: 'browser.open',
+              arguments: { url: 'https://www.google.com/search?q=Python' },
+              riskLevel: 'LOW',
+            },
+          },
+        ],
+        estimatedDurationSeconds: 1.5,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    if (lower.includes('notepad') && (lower.includes('type') || lower.includes('hello nova'))) {
+      const isSave = lower.includes('save');
+      const desktopPath = `${process.env.USERPROFILE || 'C:/Users/YOKRAJ M S R'}/Desktop/nova_test_f143.txt`.replace(/\\/g, '/');
+      const steps: any[] = [
+        {
+          id: 'step-1',
+          stepNumber: 1,
+          title: 'Launch Notepad',
+          description: 'Open Notepad text editor',
+          status: 'PENDING',
+          toolCall: {
+            callId: 'call-1',
+            toolName: 'application.open',
+            arguments: { applicationName: 'Notepad' },
+            riskLevel: 'LOW',
+          },
+        },
+        {
+          id: 'step-2',
+          stepNumber: 2,
+          title: 'Focus Notepad Window',
+          description: 'Bring Notepad to foreground',
+          status: 'PENDING',
+          dependencies: ['step-1'],
+          toolCall: {
+            callId: 'call-2',
+            toolName: 'computer.focus_window',
+            arguments: { windowTitle: 'Notepad' },
+            riskLevel: 'SAFE',
+          },
+        },
+        {
+          id: 'step-3',
+          stepNumber: 3,
+          title: 'Type Hello Nova',
+          description: 'Type text payload into Notepad',
+          status: 'PENDING',
+          dependencies: ['step-2'],
+          toolCall: {
+            callId: 'call-3',
+            toolName: 'computer.type_text',
+            arguments: { text: 'Hello Nova' },
+            riskLevel: 'LOW',
+          },
+        },
+      ];
+
+      if (isSave) {
+        steps.push({
+          id: 'step-4',
+          stepNumber: 4,
+          title: 'Save File on Desktop',
+          description: 'Save test file to desktop',
+          status: 'PENDING',
+          dependencies: ['step-3'],
+          toolCall: {
+            callId: 'call-4',
+            toolName: 'filesystem.write_file',
+            arguments: { path: desktopPath, content: 'Hello Nova' },
+            riskLevel: 'LOW',
+          },
+        });
+      }
+
+      return {
+        planId: `plan-${Date.now()}`,
+        goal,
+        goalText: goal,
+        steps,
+        estimatedDurationSeconds: 1.5,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    if (lower.includes('close notepad')) {
+      return {
+        planId: `plan-${Date.now()}`,
+        goal,
+        goalText: goal,
+        steps: [
+          {
+            id: 'step-1',
+            stepNumber: 1,
+            title: 'Close Notepad Window',
+            description: 'Close active Notepad application',
+            status: 'PENDING',
+            toolCall: {
+              callId: 'call-1',
+              toolName: 'computer.close_window',
+              arguments: { windowTitle: 'Notepad', processName: 'notepad.exe' },
+              riskLevel: 'MEDIUM',
+            },
+          },
+        ],
+        estimatedDurationSeconds: 0.5,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    if (lower.includes('calculator') || lower.includes('calc')) {
+      return {
+        planId: `plan-${Date.now()}`,
+        goal,
+        goalText: goal,
+        steps: [
+          {
+            id: 'step-1',
+            stepNumber: 1,
+            title: 'Launch Calculator',
+            description: 'Open Calculator app',
+            status: 'PENDING',
+            toolCall: {
+              callId: 'call-1',
+              toolName: 'application.open',
+              arguments: { applicationName: 'Calculator' },
+              riskLevel: 'LOW',
+            },
+          },
+          {
+            id: 'step-2',
+            stepNumber: 2,
+            title: 'Focus Calculator Window',
+            description: 'Bring Calculator window to foreground',
+            status: 'PENDING',
+            dependencies: ['step-1'],
+            toolCall: {
+              callId: 'call-2',
+              toolName: 'computer.focus_window',
+              arguments: { windowTitle: 'Calculator' },
+              riskLevel: 'SAFE',
+            },
+          },
+
+          {
+            id: 'step-3',
+            stepNumber: 3,
+            title: 'Input Calculation 25 * 4',
+            description: 'Send math keystrokes 25*4=',
+            status: 'PENDING',
+            dependencies: ['step-2'],
+            toolCall: {
+              callId: 'call-3',
+              toolName: 'computer.type_text',
+              arguments: { text: '25*4=' },
+              riskLevel: 'LOW',
+            },
+          },
+        ],
+        estimatedDurationSeconds: 1.2,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+
+    if (lower.includes('spotify')) {
+      return {
+        planId: `plan-${Date.now()}`,
+        goal,
+        goalText: goal,
+        steps: [
+          {
+            id: 'step-1',
+            stepNumber: 1,
+            title: 'Launch Spotify',
+            description: 'Open Spotify desktop app',
+            status: 'PENDING',
+            toolCall: {
+              callId: 'call-1',
+              toolName: 'application.open',
+              arguments: { applicationName: 'Spotify' },
+              riskLevel: 'LOW',
+            },
+          },
+        ],
+        estimatedDurationSeconds: 1.0,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    if (lower.includes('notepad')) {
+      return {
+        planId: `plan-${Date.now()}`,
+        goal,
+        goalText: goal,
+        steps: [
+          {
+            id: 'step-1',
+            stepNumber: 1,
+            title: 'Launch Notepad',
+            description: 'Open Notepad app',
+            status: 'PENDING',
+            toolCall: {
+              callId: 'call-1',
+              toolName: 'application.open',
+              arguments: { applicationName: 'Notepad' },
+              riskLevel: 'LOW',
+            },
+          },
+        ],
+        estimatedDurationSeconds: 0.8,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
     if (lower.includes('vs code') || lower.includes('open app')) {
       return {
         planId: `plan-${Date.now()}`,
         goal,
+        goalText: goal,
         steps: [
           {
             id: 'step-1',
@@ -124,6 +369,7 @@ export class MockModelProvider implements ModelProvider {
       return {
         planId: `plan-${Date.now()}`,
         goal,
+        goalText: goal,
         steps: [
           {
             id: 'step-1',
@@ -162,6 +408,7 @@ export class MockModelProvider implements ModelProvider {
       return {
         planId: `plan-${Date.now()}`,
         goal,
+        goalText: goal,
         steps: [
           {
             id: 'step-1',
@@ -181,6 +428,7 @@ export class MockModelProvider implements ModelProvider {
         createdAt: new Date().toISOString(),
       };
     }
+
 
     // Default multi-step goal plan
     return {

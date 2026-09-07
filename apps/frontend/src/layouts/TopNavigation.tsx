@@ -7,24 +7,9 @@ import {
   Sun,
   Moon,
   ChevronDown,
-  User,
-  LayoutDashboard,
-  MessageSquare,
-  Brain,
-  BookOpen,
-  FolderGit2,
-  Bot,
-  Rocket,
-  BarChart3,
-  Cpu,
-  Terminal,
-  Mic,
-  Settings,
-  SlidersHorizontal,
 } from 'lucide-react';
 import { useThemeStore } from '@/stores/useThemeStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { cn } from '@/utils/cn';
 
 interface TopNavigationProps {
   onToggleRightPanel?: () => void;
@@ -45,99 +30,62 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({ onToggleRightPanel
     return () => clearInterval(interval);
   }, []);
 
-  const navLinks = [
-    { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/chat', label: 'Chat', icon: MessageSquare },
-    { to: '/memory', label: 'Memory', icon: Brain },
-    { to: '/knowledge', label: 'Knowledge', icon: BookOpen },
-    { to: '/repositories', label: 'Repos', icon: FolderGit2 },
-    { to: '/agents', label: 'Agents', icon: Bot },
-    { to: '/mission-control', label: 'Mission', icon: Rocket },
-    { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-    { to: '/models', label: 'Models', icon: Cpu },
-    { to: '/terminal', label: 'Terminal', icon: Terminal },
-    { to: '/voice', label: 'Voice', icon: Mic },
-    { to: '/settings', label: 'Settings', icon: Settings },
-  ];
-
   return (
-    <header className="h-16 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl px-4 flex items-center justify-between z-30 sticky top-0">
+    <header className="h-16 border-b border-zinc-800/80 bg-black/95 backdrop-blur-2xl px-4 flex items-center justify-between z-30 sticky top-0 min-w-0">
       {/* Brand & Workspace */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-3 flex-shrink-0">
         <NavLink to="/" className="flex items-center space-x-2.5 group">
           <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 group-hover:shadow-[0_0_15px_rgba(0,240,255,0.4)] transition-all">
             <Sparkles className="w-5 h-5" />
           </div>
-          <span className="font-extrabold text-lg tracking-wider bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+          <span className="font-extrabold text-base tracking-wider bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
             NOVA<span className="text-slate-400 font-normal text-xs ml-1 font-mono">OS</span>
           </span>
         </NavLink>
 
-        <div className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs font-medium text-slate-300">
+        <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-900/90 border border-zinc-800 text-xs font-medium text-slate-300">
           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
           <span>Workspace: <strong className="text-cyan-300 font-mono">Nova</strong></span>
           <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
         </div>
       </div>
 
-      {/* Primary Top Nav Tabs */}
-      <nav className="hidden lg:flex items-center space-x-1 overflow-x-auto no-scrollbar py-1">
-        {navLinks.map((link) => {
-          const Icon = link.icon;
-          return (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-                  isActive
-                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-semibold shadow-[0_0_10px_rgba(0,240,255,0.1)]'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
-                )
-              }
-            >
-              <Icon className="w-3.5 h-3.5" />
-              <span>{link.label}</span>
-            </NavLink>
-          );
-        })}
-      </nav>
-
-      {/* Global Search & Actions */}
-      <div className="flex items-center space-x-3">
-        {/* Global Search Placeholder */}
-        <div className="relative hidden sm:block w-48 lg:w-64">
+      {/* Global Search */}
+      <div className="hidden md:flex items-center justify-center flex-1 px-4 min-w-0 max-w-md">
+        <div className="relative w-full">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
-            placeholder="Search OS memories, repos..."
-            className="w-full pl-9 pr-8 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all"
+            placeholder="Search OS memories, repos, skills..."
+            className="w-full pl-9 pr-8 py-1.5 rounded-xl bg-zinc-900/90 border border-zinc-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all"
             readOnly
           />
-          <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">
+          <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono bg-zinc-800 text-slate-400 px-1.5 py-0.5 rounded">
             ⌘K
           </kbd>
         </div>
+      </div>
 
+      {/* Right Actions & Status */}
+      <div className="flex items-center space-x-2.5 flex-shrink-0">
         {/* Live Clock */}
-        <div className="hidden xl:block font-mono text-xs text-slate-400 px-2 py-1 bg-slate-900/50 rounded-lg border border-slate-800">
+        <div className="hidden lg:block font-mono text-xs text-slate-400 px-2.5 py-1 bg-zinc-900/80 rounded-lg border border-zinc-800">
           {timeStr}
         </div>
 
         {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-slate-700 transition-colors"
+          className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-slate-400 hover:text-cyan-300 hover:border-zinc-700 transition-colors cursor-pointer"
           title="Toggle Theme"
         >
           {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
 
-        {/* Notification Button */}
+        {/* Inspection Panel Toggle */}
         <button
           onClick={onToggleRightPanel}
-          className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-slate-700 transition-colors relative"
+          className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-slate-400 hover:text-cyan-300 hover:border-zinc-700 transition-colors relative cursor-pointer"
           title="Toggle Inspection Panel"
         >
           <Bell className="w-4 h-4" />
@@ -145,7 +93,7 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({ onToggleRightPanel
         </button>
 
         {/* User Profile Avatar */}
-        <div className="flex items-center space-x-2 pl-2 border-l border-slate-800">
+        <div className="flex items-center space-x-2 pl-2 border-l border-zinc-800">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center text-slate-950 font-bold text-xs shadow-md">
             {user?.name?.charAt(0) || 'A'}
           </div>

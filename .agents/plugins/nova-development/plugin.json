@@ -1,0 +1,4 @@
+{
+  "name": "nova-development",
+  "description": "Provides Nova-AI-specific development rules, skills, lifecycle hooks, and verification workflows for repository architecture, local execution, security, testing, computer control, AI brain, voice, memory, and release verification."
+}

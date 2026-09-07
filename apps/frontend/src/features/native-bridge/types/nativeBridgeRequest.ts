@@ -48,6 +48,11 @@ export interface NativeBridgeRequest {
     enabledState?: boolean;
     processName?: string;
     textPayload?: string;
+    text?: string;
+    x?: number;
+    y?: number;
+    button?: 'left' | 'right' | 'middle';
+    keys?: string;
     keyName?: string;
     keyCombination?: string[];
     scrollDelta?: number;

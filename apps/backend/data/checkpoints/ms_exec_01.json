@@ -1,8 +1,10 @@
 {
-  "checkpoint_id": "chk_7e624b6e50",
+  "checkpoint_id": "chk_83028baaf6",
   "mission_id": "ms_exec_01",
   "goal": "Test execution plan",
-  "completed_step_ids": [],
+  "completed_step_ids": [
+    "step_browser"
+  ],
   "step_outputs": {
     "step_browser": {
       "status": "opened",
@@ -10,7 +12,10 @@
     }
   },
   "shared_context": {
-    "shared": {},
+    "shared": {
+      "status": "opened",
+      "url": "https://nova.ai"
+    },
     "step_outputs": {
       "step_browser": {
         "status": "opened",
@@ -19,5 +24,5 @@
     }
   },
   "state": "paused",
-  "timestamp": "2026-07-31T16:49:09.521622"
+  "timestamp": "2026-09-06T12:15:01.006803"
 }

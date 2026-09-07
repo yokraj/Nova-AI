@@ -43,12 +43,16 @@ from app.ai.copilot.test_engine import TestEngine
 from app.ai.copilot.utils import format_sdlc_progress
 
 
+from app.ai.copilot.orchestrator import CopilotOrchestrator
+
+
 class CopilotEngine(ICopilotEngine):
     """The central AI Software Copilot Engine runtime for Nova AI."""
 
     def __init__(self, config: Optional[CopilotConfiguration] = None) -> None:
         self.config = config or CopilotConfiguration()
         self.manager = CopilotManager(self.config)
+        self.orchestrator = CopilotOrchestrator()
         self.requirement_analyzer = RequirementAnalyzer()
         self.architecture_engine = SoftwareArchitectureEngine()
         self.technology_selector = TechnologySelector()
@@ -193,3 +197,8 @@ class CopilotEngine(ICopilotEngine):
     async def get_metrics(self) -> CopilotMetrics:
         """Retrieves copilot telemetry metrics."""
         return self.metrics_tracker.get_metrics()
+
+    async def process_copilot_request(self, request: Any) -> Any:
+        """Processes AI Software Copilot request across EXPLAIN, GUIDE, and EXECUTE modes."""
+        return await self.orchestrator.process_request(request)
+

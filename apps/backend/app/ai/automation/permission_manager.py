@@ -55,3 +55,7 @@ class AutomationPermissionManager:
                 raise AutomationSafetyError(f"Dangerous action '{action_name}' requires human approval: {e}")
 
         return True
+
+
+PermissionManager = AutomationPermissionManager
+

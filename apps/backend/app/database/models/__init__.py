@@ -2,7 +2,7 @@
 
 Exposes auditing base schemas, enums, users, conversations, messages, sessions,
 rotatable refresh tokens, profiles preferences, AI credentials configurations,
-and dashboard monitoring entities.
+skills, missions, checkpoints, agents, and dashboard monitoring entities.
 """
 
 from app.database.models.enums import (
@@ -38,6 +38,16 @@ from app.database.models.dashboard import (
     DashboardConfiguration,
 )
 
+from app.database.models.skill_model import SkillModel, SkillVersionModel
+from app.database.models.mission_model import MissionModel, MissionTaskModel
+from app.database.models.mission_checkpoint_model import (
+    MissionCheckpointModel,
+    MissionApprovalModel,
+    MissionRecoveryEventModel,
+)
+from app.database.models.agent_model import AgentModel, AgentExecutionModel
+from app.database.models.audit_model import AuditEventModel
+
 __all__ = [
     "UserStatus",
     "ConversationStatus",
@@ -57,6 +67,16 @@ __all__ = [
     "UserPreference",
     "AIProviderConfiguration",
     "MemoryModel",
+    "SkillModel",
+    "SkillVersionModel",
+    "MissionModel",
+    "MissionTaskModel",
+    "MissionCheckpointModel",
+    "MissionApprovalModel",
+    "MissionRecoveryEventModel",
+    "AgentModel",
+    "AgentExecutionModel",
+    "AuditEventModel",
     "DashboardSnapshot",
     "SystemMetric",
     "ResourceMetric",

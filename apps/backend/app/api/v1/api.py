@@ -65,3 +65,26 @@ from app.inference.api import router as inference_router
 
 router.include_router(inference_router)
 
+# Mount learned skills endpoints
+from app.api.v1.skills_router import router as skills_router
+router.include_router(skills_router)
+
+# Mount mission control endpoints
+from app.api.v1.missions_router import router as missions_router
+router.include_router(missions_router)
+
+# Mount agent workforce endpoints
+from app.api.v1.agents_router import router as agents_router
+router.include_router(agents_router)
+
+# Mount audit event endpoints
+from app.api.v1.audit_router import router as audit_router
+router.include_router(audit_router)
+
+# Mount health monitoring endpoints
+from app.api.routers.health import router as health_router
+router.include_router(health_router)
+
+
+
+

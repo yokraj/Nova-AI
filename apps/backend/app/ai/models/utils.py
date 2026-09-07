@@ -32,6 +32,7 @@ _LAZY_MAP: Dict[str, str] = {
     "AIUsage": "app.ai.models.models",
     "ProviderMetadata": "app.ai.models.models",
     "ModelType": "app.ai.models.models",
+    "ProviderType": "app.ai.models.models",
     "MessageRole": "app.ai.models.models",
     "FinishReason": "app.ai.models.models",
     "TokenUsage": "app.ai.models.models",

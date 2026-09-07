@@ -1,12 +1,12 @@
 import { UniversalCommand } from '../types/command';
 import { CommandResult } from '../types/commandResult';
-import { ExecutionOrchestrator } from '@/features/execution-runtime/orchestrator/executionOrchestrator';
-import { ExecutionRequest } from '@/features/execution-runtime/types/executionRequest';
-import { FileSystemOrchestrator } from '@/features/file-system/orchestrator/fileSystemOrchestrator';
-import { FileSystemOperationType } from '@/features/file-system/types/fileSystemOperation';
-import { BrowserOrchestrator } from '@/features/browser/orchestrator/browserOrchestrator';
-import { BrowserActionType } from '@/features/browser/types/browserAction';
-import { VisionOrchestrator } from '@/features/vision/orchestrator/visionOrchestrator';
+import { ExecutionOrchestrator } from '../../execution-runtime/orchestrator/executionOrchestrator';
+import { ExecutionRequest } from '../../execution-runtime/types/executionRequest';
+import { FileSystemOrchestrator } from '../../file-system/orchestrator/fileSystemOrchestrator';
+import { FileSystemOperationType } from '../../file-system/types/fileSystemOperation';
+import { BrowserOrchestrator } from '../../browser/orchestrator/browserOrchestrator';
+import { BrowserActionType } from '../../browser/types/browserAction';
+import { VisionOrchestrator } from '../../vision/orchestrator/visionOrchestrator';
 import { AgentRuntime } from '../../ai-runtime/runtime/agentRuntime';
 
 export class MockExecutionEngine {
@@ -125,7 +125,36 @@ export class MockExecutionEngine {
       return updated;
     }
 
-    // Default domain execution simulation
+    if (category === 'SYSTEM_CONTROL') {
+      const execReq: ExecutionRequest = {
+        executionId: `exec-${Date.now()}`,
+        commandId: updated.id,
+        capability: 'SYSTEM_CONTROL',
+        action: (updated.intent?.extractedAction as any) || 'GET_SYSTEM_INFO',
+        target: updated.intent?.extractedTarget || updated.rawInput,
+        requestedBy: 'user',
+        workspace: 'default',
+        riskLevel: updated.permission?.riskLevel || 'SAFE',
+        policy: updated.permission?.policy || 'ALLOW',
+        permissions: [],
+        timestamp: new Date().toISOString(),
+      };
+
+      const realResult = await this.orchestrator.execute(execReq);
+
+      updated.result = {
+        success: realResult.status === 'COMPLETED',
+        message: realResult.message,
+        durationSeconds: realResult.durationSeconds,
+        targetDomain: 'device-control',
+        targetId: realResult.target,
+        errorReason: realResult.error,
+      };
+
+      updated.executionState = realResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED';
+      return updated;
+    }
+
     let message = '';
     let duration = 0.8;
 
@@ -146,11 +175,8 @@ export class MockExecutionEngine {
         message = `Found 4 relevant vector memory items matching "${updated.rawInput}".`;
         duration = 0.6;
         break;
-      case 'SYSTEM_CONTROL':
-        message = `Host system command "${updated.rawInput}" completed cleanly.`;
-        duration = 0.9;
-        break;
       default:
+
         message = `Nova analyzed "${updated.rawInput}" and generated contextual response.`;
         duration = 0.5;
         break;

@@ -1,21 +1,70 @@
 export type MissionStatus =
   | 'DRAFT'
-  | 'UNDERSTANDING'
+  | 'QUEUED'
   | 'PLANNING'
-  | 'AWAITING_APPROVAL'
-  | 'READY'
   | 'EXECUTING'
   | 'PAUSED'
+  | 'AWAITING_APPROVAL'
+  | 'RECOVERING'
   | 'REPLANNING'
-  | 'VERIFYING'
   | 'COMPLETED'
-  | 'PARTIALLY_COMPLETED'
   | 'FAILED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'TIMED_OUT'
+  | 'RECOVERY_REQUIRED';
 
 export type MissionPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 
 export type AutonomyLevel = 'ASSISTED' | 'SUPERVISED' | 'AUTONOMOUS';
+
+export type RecoveryClassification =
+  | 'SAFE_TO_RESUME'
+  | 'REQUIRES_REVALIDATION'
+  | 'REQUIRES_USER_APPROVAL'
+  | 'ABORT_REQUIRED';
+
+export interface MissionResourceBudget {
+  maxSteps: number;
+  executedSteps: number;
+  retriesCount: number;
+  maxDurationSeconds: number;
+  elapsedDurationSeconds: number;
+  remainingDurationSeconds: number;
+  swarmConcurrencyLimit: number;
+}
+
+export interface MissionCheckpoint {
+  checkpointId: string;
+  executionId: string;
+  missionId: string;
+  timestamp: string;
+  status: MissionStatus;
+  currentStep: number;
+  completedSteps: string[];
+  failedSteps: string[];
+  pendingSteps: string[];
+  executionPlanVersion: number;
+  activeAgentId?: string;
+  activeSwarmTasks: string[];
+  toolExecutionState: Record<string, any>;
+  retryCounters: Record<string, number>;
+  budgetState: MissionResourceBudget;
+  approvalState: {
+    requiresApproval: boolean;
+    stepId?: string;
+    toolName?: string;
+    riskLevel?: string;
+    reason?: string;
+  };
+  recoveryState: {
+    strategy?: string;
+    attemptCount: number;
+    errorType?: string;
+  };
+  verificationResults: Array<{ stepId: string; verified: boolean; summary: string }>;
+  isSafeResumable: boolean;
+  checkpointVersion: number;
+}
 
 export interface MissionItem {
   id: string;
@@ -32,6 +81,9 @@ export interface MissionItem {
   assignedAgents: string[];
   tasksCount: number;
   completedTasksCount: number;
+  lastCheckpoint?: MissionCheckpoint;
+  budget?: MissionResourceBudget;
+  recoveryClassification?: RecoveryClassification;
 }
 
 export interface MissionProvider {

@@ -10,14 +10,7 @@ class OCRRuntime(IOCRRuntime):
     """Document and screen text extraction runtime integrating PaddleOCR v4."""
 
     async def process_ocr(self, image_bytes_or_path: Any) -> RuntimeResponse:
-        """Extracts text and tabular content from image or PDF.
-
-        Args:
-            image_bytes_or_path: Image path, PDF, or raw bytes.
-
-        Returns:
-            RuntimeResponse payload containing extracted text dictionary.
-        """
+        """Extracts text and tabular content from image or PDF."""
         ocr_result = {
             "text": "INVOICE TOTAL: $1,250.00 | VENDOR: Nova AI Inc.",
             "tables": [[["Field", "Value"], ["Invoice#", "INV-2026-0801"]]],
@@ -31,3 +24,8 @@ class OCRRuntime(IOCRRuntime):
             latency_ms=90.0,
             device_used=DeviceType.CPU,
         )
+
+    async def ocr(self, image_bytes_or_path: Any) -> RuntimeResponse:
+        """Alias method for process_ocr."""
+        return await self.process_ocr(image_bytes_or_path)
+

@@ -7,12 +7,15 @@ export type CommandExecutionState =
   | 'PERMISSION_CHECK'
   | 'AWAITING_APPROVAL'
   | 'EXECUTING'
+  | 'OBSERVING'
   | 'VERIFYING'
+  | 'RECOVERING'
   | 'COMPLETED'
   | 'FAILED'
   | 'CANCELLED'
   | 'DENIED'
   | 'REQUIRES_REPLAN';
+
 
 export interface CommandExecutionStep {
   id: string;

@@ -16,8 +16,8 @@ export const NovaStatus: React.FC<NovaStatusProps> = ({
 }) => {
   const statusInfo: Record<NovaCoreState, { title: string; subtitle: string; color: string }> = {
     IDLE: {
-      title: 'NOVA',
-      subtitle: 'UNIVERSAL INTELLIGENCE • LOCAL-FIRST • VOICE-FIRST',
+      title: 'NOVA CORE',
+      subtitle: 'READY FOR COMMANDS',
       color: 'text-cyan-400',
     },
     LISTENING: {
@@ -27,18 +27,33 @@ export const NovaStatus: React.FC<NovaStatusProps> = ({
     },
     THINKING: {
       title: 'THINKING',
-      subtitle: '"Understanding your request..."',
+      subtitle: '"Understanding request..."',
       color: 'text-purple-400',
     },
     PLANNING: {
       title: 'PLANNING',
-      subtitle: '"Preparing the best approach..."',
+      subtitle: '"Structuring execution steps..."',
       color: 'text-blue-400',
     },
     EXECUTING: {
       title: 'EXECUTING',
-      subtitle: '"Working on it..."',
+      subtitle: '"Running task..."',
       color: 'text-purple-300',
+    },
+    AWAITING_APPROVAL: {
+      title: 'AUTHORIZATION REQUIRED',
+      subtitle: '"High-risk step requires your approval."',
+      color: 'text-amber-400 animate-pulse',
+    },
+    COMPLETED: {
+      title: 'TASK COMPLETE',
+      subtitle: '"Action verified successfully."',
+      color: 'text-emerald-400',
+    },
+    FAILED: {
+      title: 'EXECUTION HALTED',
+      subtitle: '"Review execution details below."',
+      color: 'text-rose-400',
     },
     SPEAKING: {
       title: 'SPEAKING',
@@ -46,33 +61,34 @@ export const NovaStatus: React.FC<NovaStatusProps> = ({
       color: 'text-cyan-300',
     },
     SUCCESS: {
-      title: 'COMPLETE',
+      title: 'TASK COMPLETE',
       subtitle: '"Done."',
       color: 'text-emerald-400',
     },
     ERROR: {
-      title: 'I ENCOUNTERED A PROBLEM',
+      title: 'EXECUTION HALTED',
       subtitle: '"Let me explain."',
       color: 'text-rose-400',
     },
   };
 
-  const current = statusInfo[state];
+  const current = statusInfo[state] || statusInfo.IDLE;
 
   return (
-    <div className={cn('text-center space-y-1.5 select-none', className)}>
+    <div className={cn('text-center space-y-1 select-none font-sans', className)}>
       <AnimatePresence mode="wait">
         <motion.div
           key={state}
-          initial={{ opacity: 0, y: 6 }}
+          initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          className="space-y-1"
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-0.5"
         >
           <div className={cn('text-xs font-mono font-extrabold tracking-widest uppercase', current.color)}>
             {current.title}
           </div>
-          <div className="text-sm font-sans font-medium text-slate-300">
+          <div className="text-sm font-medium text-slate-300 max-w-md mx-auto truncate">
             {customText || current.subtitle}
           </div>
         </motion.div>

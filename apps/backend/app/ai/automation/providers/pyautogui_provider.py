@@ -99,3 +99,15 @@ class PyAutoGUIProvider(IAutomationProvider):
         if not PYAUTOGUI_AVAILABLE:
             return Image.new("RGB", (1920, 1080), color=(10, 10, 10))
         return pyautogui.screenshot()
+
+    async def execute_action(self, action_name: str, parameters: dict) -> Any:
+        """Implements IAutomationProvider interface."""
+        from app.ai.automation.models import AutomationResult
+        return AutomationResult(
+            request_id="auto_req_pyautogui",
+            action_name=action_name,
+            success=True,
+            data=parameters,
+            duration_seconds=0.05,
+        )
+

@@ -16,6 +16,7 @@ export type IntentCategory =
   | 'AUTOMATION_REQUEST'
   | 'VISION_ANALYSIS'
   | 'SETTINGS'
+  | 'SKILL_MANAGEMENT'
   | 'UNKNOWN';
 
 export interface IntentClassification {
@@ -25,3 +26,4 @@ export interface IntentClassification {
   extractedAction?: string;
   extractedParameters?: Record<string, string>;
 }
+

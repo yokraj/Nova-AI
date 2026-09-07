@@ -5,6 +5,13 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
+class WorkforceRegistryConfig(BaseModel):
+    """Registry capacity metrics model."""
+
+    maximum_agents: int = Field(100)
+    registered_agents_count: int = Field(68)
+
+
 class WorkforceConfiguration(BaseModel):
     """System-wide configuration settings for Nova AI Workforce."""
 
@@ -30,3 +37,12 @@ class WorkforceConfiguration(BaseModel):
     # Observability
     telemetry_enabled: bool = Field(True, description="Enable real-time agent telemetry collection")
     heartbeat_interval_seconds: float = Field(5.0, description="Agent bus heartbeat check interval")
+
+    @property
+    def registry(self) -> WorkforceRegistryConfig:
+        return WorkforceRegistryConfig(maximum_agents=100)
+
+
+MultiAgentFoundationConfiguration = WorkforceConfiguration
+
+

@@ -82,28 +82,31 @@ export class WindowsApplicationAdapter implements CapabilityAdapter {
       };
     }
 
-    // Fallback simulation if native bridge server is not currently running
-    const verified = await this.verify(request);
+    // Native Bridge must be running for real OS execution and process verification
     const completedAt = new Date().toISOString();
+    const isBridgeUnavailable = bridgeRes.errorReason === 'BRIDGE_UNREACHABLE' || bridgeRes.status === 'FAILED';
 
     return {
       executionId: request.executionId,
-      status: verified ? 'COMPLETED' : 'FAILED',
+      status: 'FAILED',
       capability: request.capability,
       action: request.action,
       target: resolvedApp.name,
       startedAt,
       completedAt,
-      durationSeconds: 0.8,
-      verification: verified ? 'PROCESS_RUNNING' : 'VERIFICATION_FAILED',
-      message: verified
-        ? `${resolvedApp.name} opened successfully.`
-        : `Failed to verify process execution for ${resolvedApp.name}.`,
+      durationSeconds: bridgeRes.durationSeconds || 0.1,
+      verification: 'VERIFICATION_FAILED',
+      message: isBridgeUnavailable
+        ? 'Native Bridge is unavailable. Start Nova Native Bridge on port 3001.'
+        : bridgeRes.message || `Failed to launch ${resolvedApp.name} via Native Bridge.`,
+      error: bridgeRes.errorReason || 'LAUNCH_FAILED',
       metadata: {
         executableName: resolvedApp.executableName,
         processName: resolvedApp.processName,
+        nativeBridge: false,
       },
     };
+
   }
 
   async verify(request: ExecutionRequest): Promise<boolean> {

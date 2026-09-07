@@ -59,11 +59,12 @@ class AgentBlueprint(BaseModel):
     """Blueprint specification for a specialized agent within a division."""
 
     agent_id: str = Field(...)
-    name: str = Field(...)
-    division: AgentDivision = Field(...)
-    role_description: str = Field(...)
+    name: str = Field("Specialized Agent")
+    division: AgentDivision = Field(AgentDivision.ENGINEERING)
+    role_description: str = Field("Autonomous agent executing specialized domain tasks.")
     skills: List[str] = Field(default_factory=list)
     status: AgentStatus = Field(AgentStatus.IDLE)
+
 
 
 class TaskNode(BaseModel):
@@ -163,3 +164,19 @@ class WorkforceHealth(BaseModel):
     total_registered_agents: int = Field(67)
     active_bus_listeners: int = Field(15)
     telemetry: WorkforceTelemetry = Field(default_factory=WorkforceTelemetry)
+
+
+AgentMetadata = AgentBlueprint
+AgentDescriptor = AgentBlueprint
+AgentRegistration = AgentBlueprint
+AgentCapability = str
+AgentContext = TaskNode
+AgentState = AgentStatus
+AgentInfo = AgentBlueprint
+AgentResult = TaskNode
+
+
+
+
+
+

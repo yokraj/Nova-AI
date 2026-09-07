@@ -2,10 +2,12 @@ import { useState, useCallback } from 'react';
 import { UniversalCommand, CommandSource } from '../types/command';
 import { MockCommandRouter } from '../mock/mockCommandRouter';
 import { MockExecutionEngine } from '../mock/mockExecutionEngine';
+import { AgentRuntime } from '../../ai-runtime/runtime/agentRuntime';
 
 export const useUniversalCommand = () => {
   const [router] = useState(() => new MockCommandRouter());
   const [engine] = useState(() => new MockExecutionEngine());
+  const [agentRuntime] = useState(() => new AgentRuntime());
   const [currentCommand, setCurrentCommand] = useState<UniversalCommand | null>(null);
   const [commandHistory, setCommandHistory] = useState<UniversalCommand[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -17,7 +19,7 @@ export const useUniversalCommand = () => {
       const cmd = router.routeCommand(rawInput, source);
       setCurrentCommand(cmd);
 
-      // Check if command is requesting a subsystem view (e.g. "show agents", "show missions", "show devices")
+      // Check if command is requesting a subsystem view
       const lower = rawInput.toLowerCase();
       if (lower.includes('show agent') || lower.includes('view agent')) {
         setDrawerDomain('agents');
@@ -33,14 +35,30 @@ export const useUniversalCommand = () => {
         setIsDrawerOpen(true);
       }
 
-      // Step 2: Execute command if permission allows
-      if (!cmd.permission?.requiresApproval) {
-        const executed = await engine.executeCommand(cmd);
-        setCurrentCommand(executed);
-        setCommandHistory((prev) => [executed, ...prev]);
+      // Step 2: Canonical Real AI Execution via AgentRuntime
+      try {
+        const agentResult = await agentRuntime.executeGoal(rawInput);
+        const updatedCmd: UniversalCommand = {
+          ...cmd,
+          executionState: agentResult.success ? 'COMPLETED' : 'FAILED',
+          result: {
+            success: agentResult.success,
+            message: agentResult.summary,
+            durationSeconds: 0.5,
+          },
+        };
+        setCurrentCommand(updatedCmd);
+        setCommandHistory((prev) => [updatedCmd, ...prev]);
+      } catch {
+        // Fallback to engine if runtime throws
+        if (!cmd.permission?.requiresApproval) {
+          const executed = await engine.executeCommand(cmd);
+          setCurrentCommand(executed);
+          setCommandHistory((prev) => [executed, ...prev]);
+        }
       }
     },
-    [router, engine]
+    [router, engine, agentRuntime]
   );
 
   const approveCurrentCommand = useCallback(async () => {

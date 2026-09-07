@@ -1,6 +1,6 @@
 """Mouse Controller providing OS cursor movements, clicks, dragging, and scrolling."""
 
-from typing import Tuple
+from typing import Any, Tuple
 import structlog
 
 logger = structlog.get_logger("mouse_controller")
@@ -9,7 +9,8 @@ logger = structlog.get_logger("mouse_controller")
 class MouseController:
     """Controls OS mouse cursor movements, clicks, double clicks, right clicks, and drag events."""
 
-    def __init__(self) -> None:
+    def __init__(self, provider: Any = None) -> None:
+        self.provider = provider
         self._current_pos: Tuple[int, int] = (960, 540)
 
     async def move_to(self, x: int, y: int) -> Tuple[int, int]:

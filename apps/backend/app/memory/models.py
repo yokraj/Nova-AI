@@ -161,7 +161,7 @@ class ConversationMemoryModel(Base):
 class UserPreferenceModel(Base):
     """User preference profiles, writing styles, and favorite tools."""
 
-    __tablename__ = "user_preferences"
+    __tablename__ = "memory_user_preferences"
 
     id = Column(String(36), primary_key=True, default=generate_uuid_str)
     user_id = Column(String(100), nullable=False, unique=True, index=True)

@@ -194,6 +194,26 @@ class ApplicationProfile(BaseModel):
     control_map: Dict[str, Any] = Field(default_factory=dict)
 
 
+class ApplicationContext(BaseModel):
+    """Canonical context data model for Application Copilots (Blender, IDEs, Office, CAD).
+
+    Captures active application state, process info, window handle, accessibility tree, and vision data.
+    Unavailable fields default to None or empty to prevent hallucinated context.
+    """
+
+    app_name: str = Field(...)
+    process_id: Optional[int] = Field(None)
+    executable_path: Optional[str] = Field(None)
+    window_title: Optional[str] = Field(None)
+    window_handle: Optional[int] = Field(None)
+    monitor_info: Optional[Dict[str, Any]] = Field(None)
+    profile: Optional[ApplicationProfile] = Field(None)
+    ui_accessibility_tree: Optional[List[UiaElementInfo]] = Field(None)
+    ocr_vision_data: Optional[OcrExtractionResult] = Field(None)
+    recent_activity: List[Dict[str, Any]] = Field(default_factory=list)
+    timestamp: float = Field(default_factory=time.time)
+
+
 class OfficeDocument(BaseModel):
     """Office document payload (Excel, Word, PowerPoint, PDF)."""
 

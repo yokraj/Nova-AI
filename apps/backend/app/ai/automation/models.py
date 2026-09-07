@@ -177,3 +177,55 @@ class AutomationHealth(BaseModel):
     components: Dict[str, str] = Field(default_factory=dict)
     active_browser_sessions: int = 0
     open_windows_count: int = 0
+
+
+class SafetyReport(BaseModel):
+    """Safety evaluation report for automation actions."""
+
+    is_safe: bool = True
+    risk_level: str = "low"
+    reasons: List[str] = Field(default_factory=list)
+    requires_approval: bool = False
+
+
+class MouseAction(BaseModel):
+    """Mouse interaction payload."""
+
+    action: str = Field("click")
+    x: int = Field(0)
+    y: int = Field(0)
+    button: str = Field("left")
+    clicks: int = Field(1)
+
+
+class KeyboardAction(BaseModel):
+    """Keyboard interaction payload."""
+
+    action: str = Field("type")
+    text: str = Field("")
+    key: str = Field("")
+
+
+class RollbackStep(BaseModel):
+    """Single action rollback step definition."""
+
+    step_id: str = Field(default_factory=lambda: f"rb_{uuid4().hex[:8]}")
+    action_name: str = Field("")
+    undo_action: str = Field("")
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+
+
+class RollbackPlan(BaseModel):
+    """Composite execution rollback plan."""
+
+    plan_id: str = Field(default_factory=lambda: f"plan_{uuid4().hex[:8]}")
+    steps: List[RollbackStep] = Field(default_factory=list)
+
+
+
+AutomationResponse = AutomationResult
+ExecutionResult = AutomationResult
+ActionStep = AutomationRequest
+
+
+

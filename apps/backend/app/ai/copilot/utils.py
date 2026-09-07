@@ -56,6 +56,10 @@ _LAZY_MAP: Dict[str, str] = {
     "CopilotHealthMonitor": "app.ai.copilot.health",
     "CopilotCache": "app.ai.copilot.cache",
     "MockCopilotProvider": "app.ai.copilot.mock_provider",
+    "CopilotMode": "app.ai.copilot.models",
+    "CopilotRequest": "app.ai.copilot.models",
+    "CopilotResponse": "app.ai.copilot.models",
+    "CopilotOrchestrator": "app.ai.copilot.orchestrator",
     "CopilotManager": "app.ai.copilot.copilot_manager",
     "CopilotEngine": "app.ai.copilot.copilot_engine",
 }

@@ -1,0 +1,10 @@
+{
+  "backend_architecture": {
+    "key": "backend_architecture",
+    "value": {
+      "framework": "FastAPI"
+    },
+    "author": "SoftwareArchitectAgent",
+    "category": "general"
+  }
+}

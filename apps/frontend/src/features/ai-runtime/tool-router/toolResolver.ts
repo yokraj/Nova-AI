@@ -10,8 +10,9 @@ export class ToolResolver {
     }
 
     const tool = this.registry.getTool(toolCall.toolName)!;
+    const args = toolCall.arguments || (toolCall as any).parameters || {};
     for (const [paramName, paramType] of Object.entries(tool.parametersSchema)) {
-      if (toolCall.arguments[paramName] === undefined) {
+      if (args[paramName] === undefined) {
         return { isValid: false, reason: `Missing required argument "${paramName}" for tool "${toolCall.toolName}".` };
       }
     }

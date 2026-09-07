@@ -112,6 +112,16 @@ export class AgentRuntime {
       plan = await this.mockProvider.generatePlan(goalText);
     }
 
+    return this.executePlan(plan);
+  }
+
+  async executePlan(plan: ExecutionPlan): Promise<{
+    success: boolean;
+    state: AgentState;
+    plan: ExecutionPlan;
+    summary: string;
+    isLocalModelUsed: boolean;
+  }> {
     this.activePlan = plan;
 
     // Step 2: Validate Plan
@@ -208,12 +218,12 @@ export class AgentRuntime {
       }
     }
 
-    this.transitionState('COMPLETED', `Goal "${goalText}" successfully executed and verified across all plan steps.`);
+    this.transitionState('COMPLETED', `Goal "${plan.goalText}" successfully executed and verified across all plan steps.`);
     return {
       success: true,
       state: 'COMPLETED',
       plan,
-      summary: `Successfully executed ${plan.steps.length} verified steps for goal: "${goalText}".`,
+      summary: `Successfully executed ${plan.steps.length} verified steps for goal: "${plan.goalText}".`,
       isLocalModelUsed: this.activeProvider === this.localProvider,
     };
   }

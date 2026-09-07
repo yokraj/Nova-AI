@@ -3,11 +3,31 @@ import { NativeBridgeRequest } from '../../native-bridge/types/nativeBridgeReque
 import { NativeSystemAction } from '../../native-bridge/types/nativeBridgeCapability';
 import { ExecutionRequest } from '../types/executionRequest';
 import { ExecutionResult } from '../types/executionResult';
+import { CapabilityAdapter } from '../types/capability';
 
-export class WindowsSystemAdapter {
+export class WindowsSystemAdapter implements CapabilityAdapter {
+
+  capabilityName = 'SYSTEM_CONTROL';
   private bridgeClient = new NativeBridgeClient();
 
+  canHandle(request: ExecutionRequest): boolean {
+    return request.capability === 'SYSTEM_CONTROL';
+  }
+
+  async validate(request: ExecutionRequest): Promise<boolean> {
+    return request.capability === 'SYSTEM_CONTROL';
+  }
+
+  async verify(request: ExecutionRequest): Promise<boolean> {
+    return true;
+  }
+
+  describe(request: ExecutionRequest): string {
+    return `Execute System Control: ${request.action} on ${request.target}`;
+  }
+
   async execute(request: ExecutionRequest): Promise<ExecutionResult> {
+
     const startedAt = Date.now();
     const action = this.mapExecutionActionToNative(request.action);
 

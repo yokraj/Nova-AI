@@ -104,6 +104,16 @@ class UniversalModelRegistry(IModelRegistry):
         """Retrieves model metadata by model ID."""
         return self._registry.get(model_id)
 
+    def find_best_model_for_category(self, category: ModelCategory) -> Optional[ModelMetadata]:
+        """Finds highest-priority model for given category."""
+        matching = [m for m in self.list_models() if m.category == category]
+        if matching:
+            matching.sort(key=lambda m: m.priority, reverse=True)
+            return matching[0]
+        all_models = self.list_models()
+        return all_models[0] if all_models else None
+
+
     async def discover_ollama_capabilities(self, installed_ollama_models: List[Dict[str, Any]]) -> List[ModelMetadata]:
         """Auto-discovers installed Ollama models and registers their capabilities dynamically."""
         discovered: List[ModelMetadata] = []

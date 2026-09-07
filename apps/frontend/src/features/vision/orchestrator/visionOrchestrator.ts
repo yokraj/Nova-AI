@@ -6,6 +6,7 @@ import { ScreenPermissionGuard } from '../security/screenPermissionGuard';
 import { VisualActionGuard } from '../security/visualActionGuard';
 import { PrivacyGuard } from '../security/privacyGuard';
 import { MockVisionProvider } from '../providers/mockVisionProvider';
+import { LocalVisionProvider } from '../providers/localVisionProvider';
 import { VisualTargetResolver } from '../resolvers/visualTargetResolver';
 
 export class VisionOrchestrator {
@@ -14,6 +15,7 @@ export class VisionOrchestrator {
   private actionGuard = new VisualActionGuard();
   private privacyGuard = new PrivacyGuard();
   private targetResolver = new VisualTargetResolver();
+  private localProvider = new LocalVisionProvider();
   private mockProvider = new MockVisionProvider();
 
   async processVisionCommand(
@@ -64,8 +66,12 @@ export class VisionOrchestrator {
       };
     }
 
+    // Check LocalVisionProvider availability
+    const isLocalAvailable = await this.localProvider.isAvailable();
+    const provider = isLocalAvailable ? this.localProvider : this.mockProvider;
+
     // Execute via provider
-    const result = await this.mockProvider.executeAction(request);
+    const result = await provider.executeAction(request);
 
     // Apply PrivacyGuard sanitization
     if (result.observation?.textExtracted) {

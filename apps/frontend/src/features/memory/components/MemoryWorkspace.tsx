@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Brain, Search, Clock, ShieldAlert } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { MOCK_MEMORY_ITEMS_EXTENDED, MOCK_MEMORY_CONFLICTS } from '../mock/mockMemoryData';
@@ -7,6 +7,8 @@ import MemoryItemCard from './MemoryItemCard';
 import MemoryTimeline from './MemoryTimeline';
 import MemoryDetailModal from './MemoryDetailModal';
 import MemoryConflictModal from './MemoryConflictModal';
+import { memoryApiService } from '../../../services/api/memoryApiService';
+import { PersistenceStatusIndicator, PersistenceState } from '../../../components/PersistenceStatusIndicator';
 
 export const MemoryWorkspace: React.FC = () => {
   const [memories, setMemories] = useState<MemoryItem[]>(MOCK_MEMORY_ITEMS_EXTENDED);
@@ -16,6 +18,29 @@ export const MemoryWorkspace: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('grid');
   const [activeItem, setActiveItem] = useState<MemoryItem | null>(null);
   const [activeConflict, setActiveConflict] = useState<MemoryConflictItem | null>(null);
+  const [persistenceState, setPersistenceState] = useState<PersistenceState>('OFFLINE');
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadMemories() {
+      setPersistenceState('SYNCING');
+      try {
+        const remote = await memoryApiService.listMemories();
+        if (isMounted && remote && remote.length > 0) {
+          setMemories(remote);
+          setPersistenceState('PERSISTED');
+        } else if (isMounted) {
+          setPersistenceState('OFFLINE');
+        }
+      } catch (err) {
+        if (isMounted) setPersistenceState('OFFLINE');
+      }
+    }
+    loadMemories();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const categories = ['all', 'Decision', 'Architecture', 'Technology', 'Requirement'];
 
@@ -76,6 +101,7 @@ export const MemoryWorkspace: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2 font-mono text-xs">
+          <PersistenceStatusIndicator status={persistenceState} />
           <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300">
             <span className="text-cyan-400 font-bold">43</span> Decisions
           </div>

@@ -1,31 +1,46 @@
 import React from 'react';
-import { Target, Users, ChevronRight } from 'lucide-react';
+import { Target, Users, ChevronRight, Play, Pause, XCircle } from 'lucide-react';
 import { cn } from '@/utils/cn';
-import { MissionItem } from '../types/mission';
-import MissionStatusBadge from './MissionStatusBadge';
-import { ProgressBar } from '@/components/status/StatusIndicators';
+import { MissionItem } from '../types/mission.js';
+import MissionStatusBadge from './MissionStatusBadge.js';
+import { ProgressBar } from '@/components/status/StatusIndicators.js';
 
 interface MissionCardProps {
   mission: MissionItem;
-  onSelect: () => void;
+  onClick?: () => void;
+  onSelect?: () => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  onCancel?: () => void;
   className?: string;
 }
 
 export const MissionCard: React.FC<MissionCardProps> = ({
   mission,
+  onClick,
   onSelect,
+  onPause,
+  onResume,
+  onCancel,
   className,
 }) => {
   const isExecuting = mission.status === 'EXECUTING' || mission.status === 'PLANNING';
+  const isPaused = mission.status === 'PAUSED';
+
+  const handleClick = () => {
+    if (onClick) onClick();
+    else if (onSelect) onSelect();
+  };
 
   return (
     <div
-      onClick={onSelect}
+      onClick={handleClick}
       className={cn(
         'p-5 rounded-3xl bg-slate-900/80 border transition-all cursor-pointer space-y-3.5 group shadow-xl relative',
         isExecuting
           ? 'border-cyan-500/50 bg-slate-900 shadow-[0_0_20px_rgba(0,240,255,0.15)]'
-          : 'border-slate-800/90 hover:border-slate-700 hover:bg-slate-900'
+          : 'border-slate-800/90 hover:border-slate-700 hover:bg-slate-900',
+        className
       )}
     >
       <div className="flex items-center justify-between">
@@ -61,15 +76,45 @@ export const MissionCard: React.FC<MissionCardProps> = ({
         <ProgressBar progress={mission.progress} />
       </div>
 
-      {/* Agents & Footer */}
-      <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800">
-        <div className="flex items-center space-x-1">
-          <Users className="w-3.5 h-3.5 text-slate-500" />
-          <span>{mission.assignedAgents.length} Agents Assigned</span>
+      {/* Action Toolbar */}
+      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 font-mono text-xs">
+        <div className="flex items-center space-x-2 text-slate-400">
+          <Users className="w-3.5 h-3.5 text-cyan-400" />
+          <span>{mission.assignedAgents.length} Agents</span>
         </div>
-        <div className="flex items-center text-cyan-400 font-bold group-hover:translate-x-0.5 transition-transform">
-          <span>Inspect DAG</span>
-          <ChevronRight className="w-3.5 h-3.5" />
+
+        <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
+          {isExecuting && onPause && (
+            <button
+              onClick={onPause}
+              className="p-1.5 rounded-lg bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 hover:bg-yellow-500/30 transition-all cursor-pointer"
+              title="Pause Mission"
+            >
+              <Pause className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {isPaused && onResume && (
+            <button
+              onClick={onResume}
+              className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/30 transition-all cursor-pointer"
+              title="Resume Mission"
+            >
+              <Play className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {onCancel && (
+            <button
+              onClick={onCancel}
+              className="p-1.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30 hover:bg-rose-500/30 transition-all cursor-pointer"
+              title="Cancel Mission"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
         </div>
       </div>
     </div>

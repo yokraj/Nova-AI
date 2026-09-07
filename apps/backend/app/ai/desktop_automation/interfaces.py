@@ -4,6 +4,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from app.ai.desktop_automation.models import (
+    ApplicationContext,
     ApplicationInfo,
     AutomationAction,
     AutomationResult,
@@ -166,4 +167,38 @@ class IUniversalDesktopAutomationEngine(ABC):
     async def get_automation_benchmarks(self) -> Any:
         """Retrieves performance benchmark metrics snapshot."""
         pass
+
+
+class IApplicationAdapter(ABC):
+    """Minimal base contract for Application Copilot adapters (e.g. Blender, IDEs, Office).
+
+    Provides standard lifecycle methods: detect, get_context, get_capabilities, execute, verify.
+    All action execution MUST route through security permission guards.
+    """
+
+    @abstractmethod
+    async def detect(self) -> bool:
+        """Detect if target application/process is currently active or available."""
+        pass
+
+    @abstractmethod
+    async def get_context(self) -> ApplicationContext:
+        """Retrieve real-time application context (process, window, accessibility tree, vision data)."""
+        pass
+
+    @abstractmethod
+    def get_capabilities(self) -> List[str]:
+        """Return supported copilot capabilities for this application."""
+        pass
+
+    @abstractmethod
+    async def execute(self, action: AutomationAction) -> AutomationResult:
+        """Execute an action through security permission guards."""
+        pass
+
+    @abstractmethod
+    async def verify(self, action: AutomationAction, result: AutomationResult) -> VerificationResult:
+        """Perform post-execution verification."""
+        pass
+
 

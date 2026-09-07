@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 import { CommandExecutionState } from '../types/execution';
 
@@ -8,12 +9,16 @@ interface ExecutionProgressProps {
 }
 
 export const ExecutionProgress: React.FC<ExecutionProgressProps> = ({ state, className }) => {
+  if (state === 'IDLE') return null;
+
   const steps: { label: string; key: CommandExecutionState }[] = [
     { label: 'UNDERSTAND', key: 'UNDERSTANDING' },
     { label: 'PLAN', key: 'PLANNING' },
-    { label: 'CHECK PERMISSION', key: 'PERMISSION_CHECK' },
+    { label: 'PERMISSION', key: 'PERMISSION_CHECK' },
     { label: 'EXECUTE', key: 'EXECUTING' },
+    { label: 'OBSERVE', key: 'OBSERVING' },
     { label: 'VERIFY', key: 'VERIFYING' },
+    { label: 'RECOVER', key: 'RECOVERING' },
   ];
 
   const getStateIndex = (s: CommandExecutionState) => {
@@ -28,43 +33,66 @@ export const ExecutionProgress: React.FC<ExecutionProgressProps> = ({ state, cla
         return 2;
       case 'EXECUTING':
         return 3;
-      case 'VERIFYING':
+      case 'OBSERVING':
         return 4;
-      case 'COMPLETED':
+      case 'VERIFYING':
         return 5;
+      case 'RECOVERING':
+        return 6;
+      case 'COMPLETED':
+        return 7;
+      case 'FAILED':
+      case 'DENIED':
+        return 3;
       default:
         return 0;
     }
   };
 
+
+  const isErrorState = state === 'FAILED' || state === 'DENIED';
   const currentIndex = getStateIndex(state);
 
   return (
-    <div className={cn('p-4 rounded-3xl bg-slate-950/80 border border-slate-800 space-y-2 font-mono text-xs shadow-xl', className)}>
-      <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">UNIVERSAL PIPELINE PROGRESS</div>
-      <div className="flex items-center justify-between gap-1 overflow-x-auto py-1">
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      className={cn('p-3 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2 font-mono text-xs shadow-xl', className)}
+    >
+      <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+        <span>PIPELINE EXECUTION</span>
+        <span className={isErrorState ? 'text-rose-400 font-bold' : 'text-cyan-400'}>{state}</span>
+      </div>
+
+      <div className="flex items-center justify-between gap-1 overflow-x-auto py-0.5">
         {steps.map((st, idx) => {
           const isDone = currentIndex > idx;
           const isCurrent = currentIndex === idx;
+          const isFailedStep = isErrorState && isCurrent;
+
           return (
-            <div key={st.key} className="flex items-center space-x-1.5 shrink-0">
+            <div key={st.key} className="flex items-center space-x-1 shrink-0">
               <span
                 className={cn(
-                  'px-2.5 py-1 rounded-xl text-[10px] font-bold border transition-all',
-                  isDone
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  'px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all',
+                  isFailedStep
+                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/50'
+                    : isDone
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                     : isCurrent
-                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 animate-pulse'
-                    : 'bg-slate-900 text-slate-600 border-slate-800'
+                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/50 animate-pulse shadow-[0_0_10px_rgba(0,240,255,0.2)]'
+                    : 'bg-slate-950 text-slate-600 border-slate-850'
                 )}
               >
-                {isDone ? '✓ ' : isCurrent ? '● ' : '○ '} {st.label}
+                {isFailedStep ? '✗ ' : isDone ? '✓ ' : isCurrent ? '● ' : '○ '} {st.label}
               </span>
+              {idx < steps.length - 1 && <span className="text-slate-700 text-[10px]">›</span>}
             </div>
           );
         })}
       </div>
-    </div>
+    </motion.div>
   );
 };
 

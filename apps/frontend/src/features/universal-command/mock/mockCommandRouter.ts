@@ -34,9 +34,37 @@ export class MockCommandRouter {
 
       return { category: 'FILE_OPERATION', confidence: 0.97, extractedTarget: input, extractedAction: action };
     }
-    if (lower.includes('vs code') || lower.includes('chrome') || lower.includes('spotify') || lower.includes('open app')) {
-      return { category: 'APPLICATION_CONTROL', confidence: 0.95, extractedTarget: 'Local Workstation', extractedAction: 'Launch Application' };
+    const appKeywords = [
+      'notepad',
+      'vs code',
+      'visual studio code',
+      'vscode',
+      'code',
+      'chrome',
+      'google chrome',
+      'terminal',
+      'windows terminal',
+      'spotify',
+      'open app',
+      'launch app',
+    ];
+    const cleanLower = lower.replace(/^(hey nova|nova|please|can you|could you)\s+/i, '').trim();
+
+    if (
+      appKeywords.some((kw) => lower.includes(kw)) ||
+      /^(open|launch|start|run)\s+/i.test(cleanLower)
+    ) {
+      let target = cleanLower.replace(/^(open|launch|start|run)\s+/i, '').trim();
+      if (!target) target = input;
+
+      return {
+        category: 'APPLICATION_CONTROL',
+        confidence: 0.98,
+        extractedTarget: target,
+        extractedAction: 'OPEN_APPLICATION',
+      };
     }
+
     if (lower.includes('folder') || lower.includes('file') || lower.includes('pdf') || lower.includes('desktop') || lower.includes('downloads') || lower.includes('documents')) {
       let action = 'READ_DIRECTORY';
       if (lower.includes('create') || lower.includes('make')) action = lower.includes('file') ? 'CREATE_FILE' : 'CREATE_DIRECTORY';
@@ -55,6 +83,9 @@ export class MockCommandRouter {
     }
     if (lower.includes('agent') || lower.includes('research') || lower.includes('architect')) {
       return { category: 'AGENT_TASK', confidence: 0.94, extractedTarget: 'Agent Workforce', extractedAction: 'Delegate Task' };
+    }
+    if (lower.includes('learn this workflow') || lower.includes('remember how i do this') || lower.includes('save as a skill') || lower.includes('use my') || lower.includes('show my skills') || lower.includes('list my automation skills') || lower.includes('forget my') || lower.includes('forget this skill') || lower.includes("don't use that skill anymore") || lower.includes('update this skill') || lower.includes('workflow skill')) {
+      return { category: 'SKILL_MANAGEMENT', confidence: 0.98, extractedTarget: 'Nova Skill Engine', extractedAction: 'Manage Learned Skills' };
     }
     if (lower.includes('remember') || lower.includes('decide') || lower.includes('frontend')) {
       return { category: 'MEMORY_SEARCH', confidence: 0.91, extractedTarget: 'Vector Memory Store', extractedAction: 'Retrieve Memories' };
@@ -85,6 +116,7 @@ export class MockCommandRouter {
       AUTOMATION_REQUEST: { type: 'MISSION_ORCHESTRATOR', providerDomain: 'missions', name: 'Workflow Automation', description: 'Automate repetitive multi-step processes', iconName: 'Zap' },
       VISION_ANALYSIS: { type: 'VISION_ENGINE', providerDomain: 'conversation', name: 'Vision Engine', description: 'Analyze UI images & multimodal assets', iconName: 'Eye' },
       SETTINGS: { type: 'SYSTEM_CONTROL', providerDomain: 'device-control', name: 'System Settings', description: 'Configure system settings', iconName: 'Settings' },
+      SKILL_MANAGEMENT: { type: 'MISSION_ORCHESTRATOR', providerDomain: 'missions', name: 'Skill & Workflow Learning Engine', description: 'Store, retrieve, and execute learned multi-step workflow skills', iconName: 'Zap' },
       UNKNOWN: { type: 'CONVERSATION_ENGINE', providerDomain: 'conversation', name: 'Nova Core', description: 'Default conversation fallback', iconName: 'Sparkles' },
     };
 

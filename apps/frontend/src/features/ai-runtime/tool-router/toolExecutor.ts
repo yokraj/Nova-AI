@@ -307,8 +307,14 @@ export class ToolExecutor {
           const combo = args.keys ? (args.keys as string).split('+') : undefined;
           res = await computer.executeKeyboardAction(action, undefined, undefined, combo);
         } else {
-          res = await computer.executeWindowAction('FOCUS_WINDOW', args.windowTitle || args.applicationName, args.processName);
+          let winAction: any = 'FOCUS_WINDOW';
+          if (toolName === 'computer.minimize_window') winAction = 'MINIMIZE_WINDOW';
+          else if (toolName === 'computer.maximize_window') winAction = 'MAXIMIZE_WINDOW';
+          else if (toolName === 'computer.restore_window') winAction = 'RESTORE_WINDOW';
+          else if (toolName === 'computer.close_window') winAction = 'CLOSE_WINDOW';
+          res = await computer.executeWindowAction(winAction, args.windowTitle || args.applicationName, args.processName);
         }
+
 
         return {
           callId: toolCall.callId,

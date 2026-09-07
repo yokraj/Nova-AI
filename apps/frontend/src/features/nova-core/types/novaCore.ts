@@ -4,6 +4,9 @@ export type NovaCoreState =
   | 'THINKING'
   | 'PLANNING'
   | 'EXECUTING'
+  | 'AWAITING_APPROVAL'
+  | 'COMPLETED'
+  | 'FAILED'
   | 'SPEAKING'
   | 'SUCCESS'
   | 'ERROR';

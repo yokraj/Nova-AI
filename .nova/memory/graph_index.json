@@ -1,0 +1,117 @@
+{
+  "entities": {
+    "UserAccount": {
+      "name": "UserAccount",
+      "entity_type": "Class",
+      "workspace": "Nova",
+      "project": "Auth",
+      "id": "UserAccount"
+    },
+    "login_user": {
+      "name": "login_user",
+      "entity_type": "Function",
+      "workspace": "Nova",
+      "project": "Auth",
+      "id": "login_user"
+    },
+    "Auth": {
+      "name": "Auth",
+      "entity_type": "Project",
+      "workspace": "Nova",
+      "project": "Auth",
+      "id": "Auth"
+    },
+    "A": {
+      "id": "A",
+      "name": "Node A",
+      "entity_type": "Class"
+    },
+    "B": {
+      "id": "B",
+      "name": "Node B",
+      "entity_type": "Function"
+    },
+    "C": {
+      "id": "C",
+      "name": "Node C",
+      "entity_type": "Database"
+    },
+    "D": {
+      "id": "D",
+      "name": "Node D",
+      "entity_type": "API"
+    },
+    "core-db": {
+      "id": "core-db",
+      "name": "Core Database",
+      "entity_type": "Database"
+    },
+    "user-service": {
+      "id": "user-service",
+      "name": "User Service",
+      "entity_type": "Service"
+    }
+  },
+  "relationships": {
+    "UserAccount->login_user": {
+      "source_name": "UserAccount",
+      "target_name": "login_user",
+      "relationship_type": "contains",
+      "weight": 1.0,
+      "source_id": "UserAccount",
+      "target_id": "login_user",
+      "workspace": "Nova",
+      "project": "Auth",
+      "id": "UserAccount->login_user"
+    },
+    "UserAccount->Auth": {
+      "source_name": "UserAccount",
+      "target_name": "Auth",
+      "relationship_type": "related_to",
+      "weight": 1.0,
+      "source_id": "UserAccount",
+      "target_id": "Auth",
+      "workspace": "Nova",
+      "project": "Auth",
+      "id": "UserAccount->Auth"
+    },
+    "login_user->Auth": {
+      "source_name": "login_user",
+      "target_name": "Auth",
+      "relationship_type": "related_to",
+      "weight": 1.0,
+      "source_id": "login_user",
+      "target_id": "Auth",
+      "workspace": "Nova",
+      "project": "Auth",
+      "id": "login_user->Auth"
+    },
+    "e1": {
+      "id": "e1",
+      "source_id": "A",
+      "target_id": "B",
+      "relationship_type": "calls",
+      "weight": 1.0
+    },
+    "e2": {
+      "id": "e2",
+      "source_id": "B",
+      "target_id": "C",
+      "relationship_type": "stores",
+      "weight": 2.0
+    },
+    "e3": {
+      "id": "e3",
+      "source_id": "C",
+      "target_id": "D",
+      "relationship_type": "connects_to",
+      "weight": 1.0
+    },
+    "r1": {
+      "id": "r1",
+      "source_id": "core-db",
+      "target_id": "user-service",
+      "relationship_type": "stores"
+    }
+  }
+}

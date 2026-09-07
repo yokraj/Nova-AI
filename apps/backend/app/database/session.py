@@ -8,14 +8,19 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from app.core.config import settings
 
-# Create the async engine with robust connection pooling and configurable query logging
-engine = create_async_engine(
-    settings.get_database_url,
-    echo=settings.DB_ECHO,
-    pool_pre_ping=True,
-    pool_size=20,
-    max_overflow=10,
-)
+db_url = settings.get_database_url
+engine_kwargs = {
+    "echo": settings.DB_ECHO,
+}
+if not db_url.startswith("sqlite"):
+    engine_kwargs.update({
+        "pool_pre_ping": True,
+        "pool_size": 20,
+        "max_overflow": 10,
+    })
+
+# Create the async engine with connection options
+engine = create_async_engine(db_url, **engine_kwargs)
 
 # Asynchronous session factory configured for automatic cleanup and transactions
 SessionLocal = async_sessionmaker(

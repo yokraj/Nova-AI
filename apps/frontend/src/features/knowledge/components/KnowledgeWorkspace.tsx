@@ -1,16 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Network, Search } from 'lucide-react';
 import { MOCK_KNOWLEDGE_ENTITIES, MOCK_KNOWLEDGE_RELATIONSHIPS } from '../mock/mockKnowledgeData';
 import { KnowledgeEntity } from '../types/knowledge';
 import KnowledgeEntityCard from './KnowledgeEntityCard';
 import KnowledgeGraphView from './KnowledgeGraphView';
 import KnowledgePathExplanationModal from './KnowledgePathExplanationModal';
+import { knowledgeApiService } from '../../../services/api/knowledgeApiService';
+import { PersistenceStatusIndicator, PersistenceState } from '../../../components/PersistenceStatusIndicator';
 
 export const KnowledgeWorkspace: React.FC = () => {
   const [entities, setEntities] = useState<KnowledgeEntity[]>(MOCK_KNOWLEDGE_ENTITIES);
   const [relationships] = useState(MOCK_KNOWLEDGE_RELATIONSHIPS);
   const [search, setSearch] = useState('');
   const [selectedEntity, setSelectedEntity] = useState<KnowledgeEntity | null>(null);
+  const [persistenceState, setPersistenceState] = useState<PersistenceState>('OFFLINE');
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadEntities() {
+      setPersistenceState('SYNCING');
+      try {
+        const remote = await knowledgeApiService.listEntities();
+        if (isMounted && remote && remote.length > 0) {
+          const mapped: KnowledgeEntity[] = remote.map((r) => ({
+            id: r.id,
+            name: r.name,
+            type: r.entityType as any || 'SystemComponent',
+            description: r.description || '',
+            importance: 0.9,
+            properties: { workspace: r.workspace, project: r.project },
+            cluster: 'BackendCore',
+            tags: [r.entityType || 'BackendCore'],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }));
+          setEntities(mapped);
+          setPersistenceState('PERSISTED');
+        } else if (isMounted) {
+          setPersistenceState('OFFLINE');
+        }
+      } catch (err) {
+        if (isMounted) setPersistenceState('OFFLINE');
+      }
+    }
+    loadEntities();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filtered = entities.filter((e) =>
     e.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -35,6 +72,7 @@ export const KnowledgeWorkspace: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2 font-mono text-xs">
+          <PersistenceStatusIndicator status={persistenceState} />
           <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300">
             <span className="text-cyan-400 font-bold">12,480</span> Nodes
           </div>

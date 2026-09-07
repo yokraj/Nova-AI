@@ -37,3 +37,13 @@ class AgentExecutionError(AgentWorkforceError):
 
     def __init__(self, agent_id: str, task_id: str, reason: str) -> None:
         super().__init__(f"Agent '{agent_id}' failed task '{task_id}': {reason}", "AGENT_EXECUTION_FAILED")
+
+
+AgentStateError = AgentExecutionError
+AgentRegistrationError = AgentWorkforceError
+AgentPermissionsError = AgentWorkforceError
+AgentDependencyError = AgentWorkforceError
+
+
+
+

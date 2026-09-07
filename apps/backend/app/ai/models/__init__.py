@@ -37,6 +37,7 @@ __all__ = [
     "AIUsage",
     "ProviderMetadata",
     "ModelType",
+    "ProviderType",
     "MessageRole",
     "FinishReason",
     "TokenUsage",

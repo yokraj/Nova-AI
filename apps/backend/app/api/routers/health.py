@@ -11,13 +11,15 @@ from app.core.constants import HEALTH_STATUS_OK
 from app.core.version import VERSION
 from app.database.session import engine
 
-router = APIRouter(prefix="/system", tags=["health"])
+router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
+@router.get("/system/health")
 async def health() -> dict:
     """Returns overall platform status and app version."""
     return {"status": HEALTH_STATUS_OK, "version": VERSION}
+
 
 
 @router.get("/live")

@@ -108,3 +108,13 @@ class FAISSVectorStore(IVectorStore):
     async def count(self) -> int:
         """Returns node count."""
         return len(self.items)
+
+    def clear(self) -> None:
+        """Clears in-memory items and removes index file from disk."""
+        self.items.clear()
+        if os.path.exists(self.index_file):
+            try:
+                os.remove(self.index_file)
+            except Exception:
+                pass
+

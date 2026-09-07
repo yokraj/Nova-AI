@@ -17,10 +17,20 @@ class AutomationConfiguration(BaseSettings):
         default=True,
         description="Whether automation engine is active.",
     )
+    permission_level: str = Field(
+        default="STANDARD",
+        description="Automation permission level ('STANDARD', 'STRICT', 'ADMIN').",
+    )
+    provider: str = Field(
+        default="pyautogui",
+        description="Automation provider driver ('pyautogui', 'win32', 'mock').",
+    )
+
     default_browser: str = Field(
         default="chrome",
         description="Default web browser driver ('chrome', 'edge', 'firefox').",
     )
+
     headless_browser: bool = Field(
         default=False,
         description="Whether to launch browser in headless mode.",
@@ -49,3 +59,16 @@ class AutomationConfiguration(BaseSettings):
         default="./data/downloads",
         description="Default local directory for intercepted file downloads.",
     )
+
+    @property
+    def safety(self) -> "AutomationConfiguration":
+        return self
+
+    @property
+    def dry_run(self) -> bool:
+        return self.safety_dry_run
+
+
+SafetyConfiguration = AutomationConfiguration
+
+

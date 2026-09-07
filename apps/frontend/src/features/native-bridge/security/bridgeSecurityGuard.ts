@@ -42,9 +42,11 @@ export class BridgeSecurityGuard {
     }
 
     // Shell injection guard
-    const rawSafe = this.commandGuard.isSafe(request.target.rawTarget);
-    if (!rawSafe) {
-      return { valid: false, reason: 'Shell injection or unsafe character detected in raw target.' };
+    if (request.target?.rawTarget) {
+      const rawSafe = this.commandGuard.isSafe(request.target.rawTarget);
+      if (!rawSafe) {
+        return { valid: false, reason: 'Shell injection or unsafe character detected in raw target.' };
+      }
     }
 
     return { valid: true };

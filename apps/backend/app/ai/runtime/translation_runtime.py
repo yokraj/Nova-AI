@@ -8,7 +8,7 @@ from app.ai.runtime.models import DeviceType, RuntimeResponse
 class TranslationRuntime(ITranslationRuntime):
     """Machine translation runtime integrating Meta NLLB-200."""
 
-    async def translate(self, text: str, target_lang: str = "en") -> RuntimeResponse:
+    async def translate(self, text: str, source_lang: str = "auto", target_lang: str = "en") -> RuntimeResponse:
         """Translates input text.
 
         Args:

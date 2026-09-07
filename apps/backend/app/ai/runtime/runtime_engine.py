@@ -142,7 +142,7 @@ class UniversalAIRuntimeEngine(IRuntimeEngine):
         self.metrics_tracker.record_inference(is_local=True, latency_ms=res.latency_ms, tokens=30)
         return res
 
-    async def translate(self, text: str, source_lang: str, target_lang: str) -> RuntimeResponse:
+    async def translate(self, text: str, source_lang: str = "auto", target_lang: str = "es") -> RuntimeResponse:
         """Executes neural text translation."""
         res = await self.translation_runtime.translate(text, source_lang, target_lang)
         self.metrics_tracker.record_inference(is_local=True, latency_ms=res.latency_ms, tokens=len(text.split()))
@@ -159,4 +159,9 @@ class UniversalAIRuntimeEngine(IRuntimeEngine):
     async def active_models(self) -> List[str]:
         """Lists active models."""
         return self.manager.list_active_models()
+
+    async def get_metrics(self) -> Any:
+        """Retrieves runtime platform telemetry metrics."""
+        return self.metrics_tracker.get_metrics()
+
 

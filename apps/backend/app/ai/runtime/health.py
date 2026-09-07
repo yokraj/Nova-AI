@@ -30,4 +30,10 @@ class LocalHealthMonitor(RuntimeHealthMonitor):
         self.provider = provider
 
     async def get_overall_health(self) -> Dict[str, Any]:
-        return {"is_healthy": True, "status": "HEALTHY"}
+        latency = 5.0
+        if self.provider and hasattr(self.provider, "health"):
+            h = await self.provider.health()
+            if hasattr(h, "latency_ms"):
+                latency = getattr(h, "latency_ms", 5.0)
+        return {"is_healthy": True, "status": "HEALTHY", "latency_ms": latency}
+

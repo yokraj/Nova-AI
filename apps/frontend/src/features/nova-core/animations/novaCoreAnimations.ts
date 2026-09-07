@@ -1,4 +1,3 @@
-import { Variants } from 'framer-motion';
 import { NovaCoreState } from '../types/novaCore';
 
 export const coreHaloVariants: Record<NovaCoreState, any> = {
@@ -26,6 +25,21 @@ export const coreHaloVariants: Record<NovaCoreState, any> = {
     scale: [1, 1.07, 1],
     opacity: [0.85, 1, 0.85],
     transition: { duration: 1.8, repeat: Infinity, ease: 'easeInOut' },
+  },
+  AWAITING_APPROVAL: {
+    scale: [1, 1.06, 1],
+    opacity: [0.7, 1, 0.7],
+    transition: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+  },
+  COMPLETED: {
+    scale: [1, 1.06, 1],
+    opacity: 1,
+    transition: { duration: 0.5 },
+  },
+  FAILED: {
+    scale: [1, 1.05, 1],
+    opacity: 1,
+    transition: { duration: 0.5 },
   },
   SPEAKING: {
     scale: [1, 1.04, 1],

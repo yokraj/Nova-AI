@@ -87,8 +87,12 @@ export interface NativeBridgeResponse {
     height?: number;
     x?: number;
     y?: number;
-    activeWindow?: { processName: string; title: string; handle: string };
-    windows?: { processName: string; title: string; handle: string }[];
+    filePath?: string;
+    action?: string;
+    keyName?: string;
+    combination?: string[];
+    activeWindow?: { processName: string; title: string; handle?: string; processId?: number; bounds?: { x: number; y: number; width: number; height: number } };
+    windows?: { processName: string; title: string; handle?: string; processId?: number }[];
     clipboardContent?: string;
     tabs?: { id: string; title: string; url: string; active: boolean }[];
     activeTab?: { id: string; title: string; url: string };
@@ -101,6 +105,7 @@ export interface NativeBridgeResponse {
     confidence?: number;
     screenshotPath?: string;
   };
+
   errorReason?: string;
   timestamp: string;
 }

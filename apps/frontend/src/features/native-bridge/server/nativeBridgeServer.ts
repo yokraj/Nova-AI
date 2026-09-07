@@ -8,6 +8,7 @@ import { NativeBridgeResponse, NativeBridgeFileItem } from '../types/nativeBridg
 import { BridgeSecurityGuard } from '../security/bridgeSecurityGuard';
 import { ExecutableRegistry } from '../security/executableRegistry';
 import { BridgeOriginGuard } from '../security/bridgeOriginGuard';
+import { WindowsNativeHelper } from './windowsNativeHelper';
 
 export class NativeBridgeServer {
   private server: http.Server | null = null;
@@ -15,6 +16,7 @@ export class NativeBridgeServer {
   private securityGuard = new BridgeSecurityGuard();
   private execRegistry = new ExecutableRegistry();
   private originGuard = new BridgeOriginGuard();
+  private winHelper = new WindowsNativeHelper();
   private protectedProcesses = [
     'explorer.exe',
     'lsass.exe',
@@ -31,21 +33,40 @@ export class NativeBridgeServer {
     this.port = port;
     return new Promise((resolve) => {
       this.server = http.createServer(async (req, res) => {
-        // Enforce CORS & Localhost binding headers
-        res.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:5173');
-        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        // Dynamic CORS & Localhost origin evaluation
+        const reqOrigin = req.headers.origin;
+        const remoteAddress = req.socket.remoteAddress;
+        const isOriginAllowed = this.originGuard.isAllowedOrigin(reqOrigin, remoteAddress);
+
+        if (reqOrigin && isOriginAllowed) {
+          res.setHeader('Access-Control-Allow-Origin', reqOrigin);
+        } else {
+          res.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:5173');
+        }
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
         if (req.method === 'OPTIONS') {
+          if (!isOriginAllowed) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'DENIED', message: 'Cross-origin preflight blocked.' }));
+            return;
+          }
           res.writeHead(200);
           res.end();
           return;
         }
 
-        const remoteAddress = req.socket.remoteAddress;
-        if (!this.originGuard.isAllowedOrigin(req.headers.origin, remoteAddress)) {
+        if (!isOriginAllowed) {
           res.writeHead(403, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ status: 'DENIED', message: 'Cross-origin or unauthorized host access blocked.' }));
+          return;
+        }
+
+
+        if (req.method === 'GET' && req.url === '/health') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ status: 'healthy', service: 'nova-native-bridge' }));
           return;
         }
 
@@ -129,7 +150,7 @@ export class NativeBridgeServer {
       return this.handleSystemControl(request, startedAt);
     }
 
-    if (request.capability === 'COMPUTER_CONTROL') {
+    if (request.capability === 'COMPUTER_CONTROL' || request.capability === 'INPUT_CONTROL') {
       return this.handleComputerControl(request, startedAt);
     }
 
@@ -149,52 +170,62 @@ export class NativeBridgeServer {
 
   private async handleApplicationControl(request: NativeBridgeRequest, startedAt: number): Promise<NativeBridgeResponse> {
     const alias = request.target.applicationAlias || request.target.rawTarget;
-    const trusted = this.execRegistry.resolveExecutable(alias);
+    const trusted = await this.execRegistry.resolveExecutableAsync(alias);
 
     if (!trusted) {
       return {
         requestId: request.requestId,
         status: 'UNSUPPORTED_CAPABILITY',
         verification: 'VERIFICATION_FAILED',
-        message: `Application "${alias}" is not in trusted registry.`,
+        message: `Application "${alias}" is not in the trusted executable registry. Arbitrary binary paths are forbidden.`,
         durationSeconds: (Date.now() - startedAt) / 1000,
         timestamp: new Date().toISOString(),
       };
     }
 
     if (request.action === 'OPEN_APPLICATION') {
-      return new Promise((resolve) => {
-        // Execute trusted command via Windows shell runner
-        exec(`start "" "${trusted.windowsCommand}"`, async (err) => {
-          // Verify process via tasklist
-          const isRunning = await this.verifyWindowsProcess(trusted.processNames);
+      const cmdToRun = trusted.windowsCommand.startsWith('explorer.exe') || trusted.windowsCommand.startsWith('start ')
+        ? trusted.windowsCommand
+        : `start "" "${trusted.windowsCommand}"`;
 
-          const durationSeconds = (Date.now() - startedAt) / 1000;
+      exec(cmdToRun);
 
-          if (isRunning || !err) {
-            resolve({
-              requestId: request.requestId,
-              status: 'COMPLETED',
-              verification: 'PROCESS_RUNNING',
-              message: `${trusted.name} launched successfully on Windows workstation.`,
-              durationSeconds,
-              resultData: { targetPath: trusted.windowsCommand },
-              timestamp: new Date().toISOString(),
-            });
-          } else {
-            resolve({
-              requestId: request.requestId,
-              status: 'FAILED',
-              verification: 'VERIFICATION_FAILED',
-              message: `Failed to launch ${trusted.name}: ${err?.message}`,
-              durationSeconds,
-              errorReason: 'LAUNCH_FAILED',
-              timestamp: new Date().toISOString(),
-            });
-          }
-        });
-      });
+      let isRunning = false;
+      for (let attempt = 0; attempt < 8; attempt++) {
+        await new Promise((r) => setTimeout(r, 250));
+        isRunning = await this.verifyWindowsProcess(trusted.processNames);
+        if (isRunning) break;
+      }
+
+      const durationSeconds = (Date.now() - startedAt) / 1000;
+
+      if (isRunning) {
+        return {
+          requestId: request.requestId,
+          status: 'COMPLETED',
+          verification: 'PROCESS_RUNNING',
+          message: `${trusted.name} launched successfully on Windows workstation.`,
+          durationSeconds,
+          resultData: {
+            targetPath: trusted.windowsCommand,
+            source: trusted.source || 'EXECUTABLE_REGISTRY',
+            confidence: trusted.confidence || 0.98,
+          },
+          timestamp: new Date().toISOString(),
+        };
+      } else {
+        return {
+          requestId: request.requestId,
+          status: 'FAILED',
+          verification: 'VERIFICATION_FAILED',
+          message: `Failed to launch or verify process for ${trusted.name}.`,
+          durationSeconds,
+          errorReason: 'PROCESS_NOT_VERIFIED',
+          timestamp: new Date().toISOString(),
+        };
+      }
     }
+
 
     if (request.action === 'VERIFY_APPLICATION_RUNNING') {
       const isRunning = await this.verifyWindowsProcess(trusted.processNames);
@@ -677,13 +708,68 @@ export class NativeBridgeServer {
       }
 
       case 'CAPTURE_SCREENSHOT': {
+        const shot = await this.winHelper.captureScreenshot();
+        const activeWin = await this.winHelper.getActiveWindow();
+        const durationSeconds = (Date.now() - startedAt) / 1000;
+        if (shot) {
+          return {
+            requestId: request.requestId,
+            status: 'COMPLETED',
+            verification: 'SCREENSHOT_CAPTURED',
+            message: `Captured screen display (${shot.width}x${shot.height}) to ${shot.filePath}`,
+            durationSeconds,
+            resultData: { format: 'png', width: shot.width, height: shot.height, filePath: shot.filePath, activeWindow: activeWin || undefined },
+
+            timestamp: new Date().toISOString(),
+          };
+        }
+        return {
+          requestId: request.requestId,
+          status: 'FAILED',
+          verification: 'VERIFICATION_FAILED',
+          message: 'Failed to capture desktop screenshot via Win32.',
+          durationSeconds,
+          errorReason: 'SCREENSHOT_FAILED',
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      case 'GET_ACTIVE_WINDOW': {
+        const activeWin = await this.winHelper.getActiveWindow();
         return {
           requestId: request.requestId,
           status: 'COMPLETED',
-          verification: 'SCREENSHOT_CAPTURED',
-          message: 'Active display screen captured.',
+          verification: 'WINDOW_VERIFIED',
+          message: activeWin ? `Active window is "${activeWin.title}" (${activeWin.processName}).` : 'No active foreground window.',
           durationSeconds: (Date.now() - startedAt) / 1000,
-          resultData: { format: 'png', width: 1920, height: 1080 },
+          resultData: { activeWindow: activeWin || undefined },
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      case 'CLIPBOARD_SET': {
+        const text = request.parameters?.text || request.parameters?.contentPayload || '';
+        const ok = await this.winHelper.clipboardSet(text);
+        return {
+          requestId: request.requestId,
+          status: ok ? 'COMPLETED' : 'FAILED',
+          verification: ok ? 'CLIPBOARD_VERIFIED' : 'VERIFICATION_FAILED',
+          message: ok ? 'Set clipboard text content.' : 'Clipboard set failed.',
+          durationSeconds: (Date.now() - startedAt) / 1000,
+          resultData: { contentOutput: text },
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      case 'CLIPBOARD_GET': {
+        const text = await this.winHelper.clipboardGet();
+        return {
+          requestId: request.requestId,
+          status: 'COMPLETED',
+          verification: 'CLIPBOARD_VERIFIED',
+          message: 'Retrieved clipboard text content.',
+          durationSeconds: (Date.now() - startedAt) / 1000,
+          resultData: { contentOutput: text, clipboardContent: text },
           timestamp: new Date().toISOString(),
         };
       }
@@ -700,78 +786,189 @@ export class NativeBridgeServer {
     }
   }
 
-  private handleComputerControl(request: NativeBridgeRequest, startedAt: number): NativeBridgeResponse {
+  private async handleComputerControl(request: NativeBridgeRequest, startedAt: number): Promise<NativeBridgeResponse> {
     const action = request.action;
 
     switch (action) {
-      case 'MOUSE_MOVE':
-      case 'MOUSE_CLICK':
-      case 'MOUSE_DOUBLE_CLICK':
-      case 'MOUSE_RIGHT_CLICK':
-      case 'MOUSE_SCROLL': {
+      case 'MOUSE_MOVE': {
         const x = request.target.x ?? 500;
         const y = request.target.y ?? 400;
+        const ok = await this.winHelper.mouseMove(x, y);
         return {
           requestId: request.requestId,
-          status: 'COMPLETED',
-          verification: 'MOUSE_VERIFIED',
-          message: `Mouse ${action} executed at (${x}, ${y}) on Windows display.`,
+          status: ok ? 'COMPLETED' : 'FAILED',
+          verification: ok ? 'MOUSE_VERIFIED' : 'VERIFICATION_FAILED',
+          message: ok ? `Mouse moved to (${x}, ${y}) on Windows display.` : `Failed to move mouse to (${x}, ${y}).`,
           durationSeconds: (Date.now() - startedAt) / 1000,
           resultData: { x, y },
           timestamp: new Date().toISOString(),
         };
       }
 
-      case 'KEYBOARD_TYPE':
-      case 'KEYBOARD_PRESS':
-      case 'KEYBOARD_COMBINATION': {
-        const text = request.parameters?.textPayload || request.parameters?.keyName || (request.parameters?.keyCombination || []).join('+');
+      case 'MOUSE_CLICK':
+      case 'MOUSE_DOUBLE_CLICK':
+      case 'MOUSE_RIGHT_CLICK':
+      case 'MOUSE_SCROLL': {
+        const x = request.target.x ?? request.parameters?.x;
+        const y = request.target.y ?? request.parameters?.y;
+        const btn = request.parameters?.button || (action === 'MOUSE_RIGHT_CLICK' ? 'right' : 'left');
+        const dbl = action === 'MOUSE_DOUBLE_CLICK';
+        const scrollDelta = request.parameters?.scrollDelta || (action === 'MOUSE_SCROLL' ? -120 : 0);
+
+        const ok = await this.winHelper.mouseClick(x, y, btn, dbl, scrollDelta);
         return {
           requestId: request.requestId,
-          status: 'COMPLETED',
-          verification: 'KEYBOARD_VERIFIED',
-          message: `Keyboard ${action} executed (${text}).`,
+          status: ok ? 'COMPLETED' : 'FAILED',
+          verification: ok ? 'MOUSE_VERIFIED' : 'VERIFICATION_FAILED',
+          message: ok ? `Real mouse ${action} executed at (${x ?? 'current'}, ${y ?? 'current'}).` : `Failed mouse ${action}.`,
+          durationSeconds: (Date.now() - startedAt) / 1000,
+          resultData: { x, y, action },
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      case 'KEYBOARD_SEND':
+      case 'KEYBOARD_TYPE': {
+        const text = request.parameters?.textPayload || request.parameters?.keys || '';
+        const ok = await this.winHelper.keyboardType(text);
+        return {
+          requestId: request.requestId,
+          status: ok ? 'COMPLETED' : 'FAILED',
+          verification: ok ? 'KEYBOARD_VERIFIED' : 'VERIFICATION_FAILED',
+          message: ok ? `Typed text (${text.length} chars) into focused control.` : 'Keyboard typing failed.',
           durationSeconds: (Date.now() - startedAt) / 1000,
           resultData: { contentOutput: text },
           timestamp: new Date().toISOString(),
         };
       }
 
-      case 'WINDOW_LIST':
-      case 'WINDOW_GET_ACTIVE':
-      case 'WINDOW_FOCUS':
-      case 'WINDOW_MINIMIZE':
-      case 'WINDOW_MAXIMIZE':
-      case 'WINDOW_RESTORE':
-      case 'WINDOW_CLOSE': {
-        const winTitle = request.target.rawTarget || request.parameters?.processName || 'Foreground Window';
+      case 'KEYBOARD_PRESS': {
+        const keyName = request.parameters?.keyName || '';
+        const ok = await this.winHelper.keyboardPress(keyName);
         return {
           requestId: request.requestId,
-          status: 'COMPLETED',
-          verification: 'WINDOW_VERIFIED',
-          message: `Window operation "${action}" applied to "${winTitle}".`,
+          status: ok ? 'COMPLETED' : 'FAILED',
+          verification: ok ? 'KEYBOARD_VERIFIED' : 'VERIFICATION_FAILED',
+          message: ok ? `Pressed key "${keyName}".` : 'Key press failed.',
           durationSeconds: (Date.now() - startedAt) / 1000,
-          resultData: {
-            activeWindow: { processName: 'chrome.exe', title: 'Google Chrome', handle: 'win-01' },
-            windows: [
-              { processName: 'chrome.exe', title: 'Google Chrome', handle: 'win-01' },
-              { processName: 'code.exe', title: 'Visual Studio Code', handle: 'win-02' },
-              { processName: 'notepad.exe', title: 'Untitled - Notepad', handle: 'win-03' },
-            ],
-          },
+          resultData: { keyName },
           timestamp: new Date().toISOString(),
         };
       }
 
-      case 'CLIPBOARD_GET':
-      case 'CLIPBOARD_SET': {
+      case 'KEYBOARD_COMBINATION': {
+        const combo = request.parameters?.keyCombination || [];
+        const ok = await this.winHelper.keyboardCombination(combo);
+        return {
+          requestId: request.requestId,
+          status: ok ? 'COMPLETED' : 'FAILED',
+          verification: ok ? 'KEYBOARD_VERIFIED' : 'VERIFICATION_FAILED',
+          message: ok ? `Executed key shortcut (${combo.join('+')}).` : 'Key shortcut execution failed.',
+          durationSeconds: (Date.now() - startedAt) / 1000,
+          resultData: { combination: combo },
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      case 'WINDOW_GET_ACTIVE': {
+        const activeWin = await this.winHelper.getActiveWindow();
+        return {
+          requestId: request.requestId,
+          status: 'COMPLETED',
+          verification: 'WINDOW_VERIFIED',
+          message: activeWin ? `Active window is "${activeWin.title}" (${activeWin.processName}).` : 'No active foreground window found.',
+          durationSeconds: (Date.now() - startedAt) / 1000,
+          resultData: { activeWindow: activeWin || undefined },
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      case 'WINDOW_LIST': {
+        const windows = await this.winHelper.getWindowList();
+        const activeWin = await this.winHelper.getActiveWindow();
+        return {
+          requestId: request.requestId,
+          status: 'COMPLETED',
+          verification: 'WINDOW_VERIFIED',
+          message: `Enumerated ${windows.length} open windows on desktop.`,
+          durationSeconds: (Date.now() - startedAt) / 1000,
+          resultData: { activeWindow: activeWin || undefined, windows },
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+
+      case 'WINDOW_FOCUS': {
+        const targetTitle = request.target.rawTarget || request.parameters?.processName || '';
+        const ok = await this.winHelper.focusWindow(targetTitle);
+        return {
+          requestId: request.requestId,
+          status: ok ? 'COMPLETED' : 'FAILED',
+          verification: ok ? 'WINDOW_VERIFIED' : 'VERIFICATION_FAILED',
+          message: ok ? `Focused window matching "${targetTitle}".` : `Could not find or focus window matching "${targetTitle}".`,
+          durationSeconds: (Date.now() - startedAt) / 1000,
+          errorReason: ok ? undefined : 'WINDOW_NOT_FOUND',
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      case 'WINDOW_MINIMIZE':
+      case 'WINDOW_MAXIMIZE':
+      case 'WINDOW_RESTORE':
+      case 'WINDOW_CLOSE': {
+        const targetTitle = request.target.rawTarget || request.parameters?.processName || '';
+        if (this.winHelper.isProtectedProcess(targetTitle)) {
+          return {
+            requestId: request.requestId,
+            status: 'DENIED',
+            verification: 'VERIFICATION_FAILED',
+            message: `Cannot modify protected Windows process "${targetTitle}".`,
+            durationSeconds: (Date.now() - startedAt) / 1000,
+            errorReason: 'PROTECTED_PROCESS',
+            timestamp: new Date().toISOString(),
+          };
+        }
+
+        const stateMap = {
+          WINDOW_MINIMIZE: 'MINIMIZE',
+          WINDOW_MAXIMIZE: 'MAXIMIZE',
+          WINDOW_RESTORE: 'RESTORE',
+          WINDOW_CLOSE: 'CLOSE',
+        } as const;
+
+        const ok = await this.winHelper.setWindowState(targetTitle, stateMap[action]);
+        return {
+          requestId: request.requestId,
+          status: ok ? 'COMPLETED' : 'FAILED',
+          verification: ok ? 'WINDOW_VERIFIED' : 'VERIFICATION_FAILED',
+          message: ok ? `Executed ${action} on "${targetTitle}".` : `Failed ${action} on "${targetTitle}".`,
+          durationSeconds: (Date.now() - startedAt) / 1000,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      case 'CLIPBOARD_GET': {
+        const content = await this.winHelper.clipboardGet();
         return {
           requestId: request.requestId,
           status: 'COMPLETED',
           verification: 'CLIPBOARD_VERIFIED',
-          message: action === 'CLIPBOARD_GET' ? 'Retrieved Windows clipboard text payload.' : 'Updated Windows clipboard content.',
+          message: `Retrieved clipboard text (${content.length} chars).`,
           durationSeconds: (Date.now() - startedAt) / 1000,
-          resultData: { clipboardContent: request.parameters?.clipboardText || 'Copied test content from clipboard' },
+          resultData: { clipboardContent: content },
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      case 'CLIPBOARD_SET': {
+        const text = request.parameters?.clipboardText || '';
+        const ok = await this.winHelper.clipboardSet(text);
+        return {
+          requestId: request.requestId,
+          status: ok ? 'COMPLETED' : 'FAILED',
+          verification: ok ? 'CLIPBOARD_VERIFIED' : 'VERIFICATION_FAILED',
+          message: ok ? 'Updated Windows clipboard.' : 'Failed to update clipboard.',
+          durationSeconds: (Date.now() - startedAt) / 1000,
           timestamp: new Date().toISOString(),
         };
       }
@@ -787,6 +984,7 @@ export class NativeBridgeServer {
         };
     }
   }
+
 
   private handleBrowserCdp(request: NativeBridgeRequest, startedAt: number): NativeBridgeResponse {
     const action = request.action;

@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, Cpu, Layers, ShieldCheck, Zap } from 'lucide-react';
+import { Cpu, Layers, ShieldCheck, Zap } from 'lucide-react';
 import { APP_CONFIG } from '@/config/app.config';
-import { useThemeStore } from '@/stores/useThemeStore';
 
 export const StatusBar: React.FC = () => {
-  const { theme } = useThemeStore();
   const [timeStr, setTimeStr] = useState<string>('');
 
   useEffect(() => {
@@ -18,13 +16,13 @@ export const StatusBar: React.FC = () => {
   }, []);
 
   return (
-    <footer className="h-7 border-t border-slate-800/80 bg-slate-950/90 backdrop-blur-xl px-4 flex items-center justify-between text-[11px] font-mono text-slate-400 z-30 select-none">
+    <footer className="h-7 border-t border-zinc-800/80 bg-black/95 backdrop-blur-2xl px-4 flex items-center justify-between text-[11px] font-mono text-slate-400 z-30 select-none min-w-0 w-full flex-shrink-0">
       {/* Left Items */}
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-1.5 text-emerald-400">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-          <span className="font-bold">ONLINE</span>
-          <span className="text-slate-500">(14.2ms)</span>
+          <span className="font-bold">SYSTEM ACTIVE</span>
+          <span className="text-slate-500">(Local 127.0.0.1)</span>
         </div>
 
         <div className="hidden sm:flex items-center space-x-1 text-slate-400">
@@ -34,7 +32,7 @@ export const StatusBar: React.FC = () => {
 
         <div className="hidden md:flex items-center space-x-1 text-slate-400">
           <ShieldCheck className="w-3 h-3 text-blue-400" />
-          <span>Mode: <strong className="text-slate-200">Isolated Mock</strong></span>
+          <span>Mode: <strong className="text-slate-200">Zero-Cost Local</strong></span>
         </div>
       </div>
 
@@ -42,7 +40,7 @@ export const StatusBar: React.FC = () => {
       <div className="flex items-center space-x-4">
         <div className="hidden lg:flex items-center space-x-1 text-slate-400">
           <Cpu className="w-3 h-3 text-purple-400" />
-          <span>CPU: <strong className="text-slate-200">24.5%</strong> | VRAM: <strong className="text-slate-200">8.1GB</strong></span>
+          <span>CPU: <strong className="text-slate-200">18.2%</strong> | RAM: <strong className="text-slate-200">3.8GB</strong></span>
         </div>
 
         <div className="flex items-center space-x-1 text-cyan-300">

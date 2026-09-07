@@ -34,3 +34,12 @@ class OCRProcessingError(AutomationError):
 class AutomationSafetyError(AutomationError):
     """Raised when an automation action is blocked due to safety violations."""
     pass
+
+
+SafetyViolationError = AutomationSafetyError
+RollbackError = AutomationError
+ActionValidationError = AutomationError
+ActionExecutionError = AutomationError
+
+
+

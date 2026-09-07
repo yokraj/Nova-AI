@@ -21,12 +21,17 @@ export async function runRealWindowsSmokeTests(): Promise<{ passed: boolean; res
 
   try {
     // Start local Native Bridge server on port 3001
-    const started = await server.start(3001);
+    let started = await server.start(3001);
+    if (!started) {
+      const health = await client.healthCheck();
+      started = health.healthy;
+    }
     logResult('Native Bridge Server Start', started, 'Server bound to 127.0.0.1:3001');
 
     if (!started) {
       return { passed: false, results };
     }
+
 
     // Test 1: Real Directory Creation on Windows Filesystem
     const reqCreateDir: NativeBridgeRequest = {

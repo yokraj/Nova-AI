@@ -3,18 +3,25 @@ import { motion } from 'framer-motion';
 import {
   ChevronLeft,
   ChevronRight,
-  Plus,
-  Pin,
-  Folder,
-  MessageSquare,
-  Star,
-  Layers,
   Sparkles,
+  MessageSquare,
+  Rocket,
+  Bot,
   Zap,
+  Layers,
+  Brain,
+  BookOpen,
+  FolderGit2,
+  Globe,
+  Monitor,
+  Terminal,
+  Clock,
+  Cpu,
+  BarChart3,
+  Settings,
 } from 'lucide-react';
 import { NavigationItem } from './NavigationItem';
 import { SidebarSection } from './SidebarSection';
-import { cn } from '@/utils/cn';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -24,75 +31,59 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse }) => {
   return (
     <motion.aside
-      animate={{ width: collapsed ? 72 : 256 }}
+      animate={{ width: collapsed ? 72 : 240 }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="h-[calc(100vh-4rem)] border-r border-slate-800/80 bg-slate-950/90 backdrop-blur-xl flex flex-col justify-between z-20 select-none flex-shrink-0"
+      className="h-[calc(100vh-4rem)] border-r border-zinc-800/80 bg-black/95 backdrop-blur-2xl flex flex-col justify-between z-20 select-none flex-shrink-0 min-w-0"
     >
       {/* Upper Content */}
-      <div className="p-3 space-y-4 overflow-y-auto no-scrollbar">
-        {/* Quick Action Button */}
-        <button
-          className={cn(
-            'w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-bold text-xs flex items-center justify-center space-x-2 shadow-[0_0_20px_rgba(0,240,255,0.25)] hover:shadow-[0_0_25px_rgba(0,240,255,0.4)] hover:scale-[1.02] transition-all',
-            collapsed && 'px-0'
-          )}
-        >
-          <Plus className="w-4 h-4" />
-          {!collapsed && <span>New Execution</span>}
-        </button>
-
-        {/* Section: Quick Nav */}
-        <SidebarSection title="Nav" collapsed={collapsed}>
-          <NavigationItem to="/" icon={Sparkles} label="Overview" collapsed={collapsed} />
-          <NavigationItem to="/chat" icon={MessageSquare} label="Intelligence Chat" badge="3" collapsed={collapsed} />
-          <NavigationItem to="/repositories" icon={Folder} label="Source Repos" collapsed={collapsed} />
+      <div className="p-2.5 space-y-3 overflow-y-auto no-scrollbar">
+        {/* CORE */}
+        <SidebarSection title="CORE" collapsed={collapsed} defaultExpanded={true}>
+          <NavigationItem to="/" icon={Sparkles} label="Nova Core" collapsed={collapsed} />
+          <NavigationItem to="/chat" icon={MessageSquare} label="Intelligence Chat" badge="Live" collapsed={collapsed} />
         </SidebarSection>
 
-        {/* Section: Pinned Chats */}
-        <SidebarSection title="Pinned Chats" collapsed={collapsed}>
-          <div className="space-y-1">
-            <button className={cn('w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-cyan-300 hover:bg-slate-900/60 transition-colors text-left truncate', collapsed && 'justify-center px-0')}>
-              <Pin className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-              {!collapsed && <span className="truncate">Nova Architecture Refactor</span>}
-            </button>
-            <button className={cn('w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-cyan-300 hover:bg-slate-900/60 transition-colors text-left truncate', collapsed && 'justify-center px-0')}>
-              <Pin className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-              {!collapsed && <span className="truncate">Inference Gateway Benchmarks</span>}
-            </button>
-          </div>
+        {/* WORK */}
+        <SidebarSection title="WORK" collapsed={collapsed} defaultExpanded={true}>
+          <NavigationItem to="/mission-control" icon={Rocket} label="Missions" collapsed={collapsed} />
+          <NavigationItem to="/agents" icon={Bot} label="Agents" collapsed={collapsed} />
+          <NavigationItem to="/skills" icon={Zap} label="Learned Skills" collapsed={collapsed} />
+          <NavigationItem to="/workflows" icon={Layers} label="Workflows" collapsed={collapsed} />
         </SidebarSection>
 
-        {/* Section: Projects */}
-        <SidebarSection title="Projects" collapsed={collapsed}>
-          <div className="space-y-1">
-            <button className={cn('w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-cyan-300 hover:bg-slate-900/60 transition-colors text-left truncate', collapsed && 'justify-center px-0')}>
-              <Folder className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-              {!collapsed && <span className="truncate">Kernel Subsystems</span>}
-            </button>
-            <button className={cn('w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-cyan-300 hover:bg-slate-900/60 transition-colors text-left truncate', collapsed && 'justify-center px-0')}>
-              <Folder className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-              {!collapsed && <span className="truncate">AI Workforce Fleet</span>}
-            </button>
-          </div>
+        {/* KNOWLEDGE */}
+        <SidebarSection title="KNOWLEDGE" collapsed={collapsed} defaultExpanded={true}>
+          <NavigationItem to="/memory" icon={Brain} label="Memory" collapsed={collapsed} />
+          <NavigationItem to="/knowledge" icon={BookOpen} label="Knowledge" collapsed={collapsed} />
+          <NavigationItem to="/repositories" icon={FolderGit2} label="Repositories" collapsed={collapsed} />
         </SidebarSection>
 
-        {/* Section: Recent Conversations */}
-        <SidebarSection title="Recent" collapsed={collapsed}>
-          <div className="space-y-1">
-            <button className={cn('w-full flex items-center space-x-2.5 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 transition-colors text-left truncate', collapsed && 'justify-center px-0')}>
-              <MessageSquare className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
-              {!collapsed && <span className="truncate">Hybrid RAG Evaluation</span>}
-            </button>
-          </div>
+        {/* CONTROL */}
+        <SidebarSection title="CONTROL" collapsed={collapsed} defaultExpanded={false}>
+          <NavigationItem to="/devices" icon={Globe} label="Browser Automation" collapsed={collapsed} />
+          <NavigationItem to="/computer-control" icon={Monitor} label="Computer Control" collapsed={collapsed} />
+          <NavigationItem to="/terminal" icon={Terminal} label="System Control" collapsed={collapsed} />
+        </SidebarSection>
+
+        {/* AUTOMATION */}
+        <SidebarSection title="AUTOMATION" collapsed={collapsed} defaultExpanded={false}>
+          <NavigationItem to="/automation" icon={Clock} label="Background Tasks" collapsed={collapsed} />
+        </SidebarSection>
+
+        {/* SYSTEM */}
+        <SidebarSection title="SYSTEM" collapsed={collapsed} defaultExpanded={false}>
+          <NavigationItem to="/models" icon={Cpu} label="Local Models" collapsed={collapsed} />
+          <NavigationItem to="/analytics" icon={BarChart3} label="Diagnostics" collapsed={collapsed} />
+          <NavigationItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
         </SidebarSection>
       </div>
 
       {/* Footer Collapse Button */}
-      <div className="p-3 border-t border-slate-800/80">
+      <div className="p-2 border-t border-zinc-800/80">
         <button
           onClick={onToggleCollapse}
-          className="w-full flex items-center justify-center p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-cyan-300 border border-slate-800 transition-colors"
-          title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          className="w-full flex items-center justify-center p-2 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 text-slate-400 hover:text-cyan-300 border border-zinc-800 transition-colors cursor-pointer"
+          title={collapsed ? 'Expand Navigation Sidebar' : 'Collapse Navigation Sidebar'}
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>

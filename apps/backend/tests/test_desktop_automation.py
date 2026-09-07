@@ -165,3 +165,52 @@ async def test_mock_desktop_automation_provider():
 
     click_res = await mock.mock_click_control("Submit")
     assert click_res.success is True
+
+
+@pytest.mark.anyio
+async def test_application_context_and_adapters():
+    from app.ai.desktop_automation.application_adapter import BaseApplicationAdapter, BlenderApplicationAdapter
+    from app.ai.desktop_automation.exceptions import ApprovalRequiredError
+    from app.ai.desktop_automation.models import ApplicationContext, AutomationAction
+
+    adapter = BaseApplicationAdapter("VS Code")
+
+    # 1. Test ApplicationContext retrieval
+    context = await adapter.get_context()
+    assert isinstance(context, ApplicationContext)
+    assert context.app_name == "VS Code"
+
+    # 2. Test Security check occurs BEFORE execution
+    sensitive_action = AutomationAction(action_type="registry_write", target_label="HKLM")
+    with pytest.raises(ApprovalRequiredError):
+        await adapter.execute(sensitive_action)
+
+    # 3. Test unsupported adapter action returns success=False (never fake success)
+    unsupported_action = AutomationAction(action_type="custom_unsupported_action", target_label="target")
+    result_unsupported = await adapter.execute(unsupported_action)
+    assert result_unsupported.success is False
+    assert "not supported or implemented" in result_unsupported.error_message
+
+    # 4. Test verification cannot turn fake/failed success into verified=True
+    verification_unsupported = await adapter.verify(unsupported_action, result_unsupported)
+    assert verification_unsupported.verified is False
+    assert verification_unsupported.confidence == 0.0
+
+    # 5. Test supported desktop action uses real infrastructure
+    supported_action = AutomationAction(action_type="click", target_label="Save Button")
+    result_supported = await adapter.execute(supported_action)
+    assert result_supported.success is True
+    verification_supported = await adapter.verify(supported_action, result_supported)
+    assert verification_supported.verified is True
+
+    # 6. Test Blender foundation does not claim unimplemented execution
+    blender_adapter = BlenderApplicationAdapter()
+    blender_unimplemented = AutomationAction(action_type="blender_render_scene", target_label="camera")
+    blender_result = await blender_adapter.execute(blender_unimplemented)
+    assert blender_result.success is False
+    assert "Foundation Only" in blender_result.error_message
+
+    blender_verify = await blender_adapter.verify(blender_unimplemented, blender_result)
+    assert blender_verify.verified is False
+
+

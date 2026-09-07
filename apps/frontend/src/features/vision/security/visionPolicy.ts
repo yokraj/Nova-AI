@@ -48,4 +48,20 @@ export class VisionPolicy {
         : `Visual action "${action}" authorized.`,
     };
   }
+
+  evaluateConfidence(confidence: number): {
+    status: 'SAFE_TO_ACT' | 'RE_OBSERVE' | 'NEEDS_CLARIFICATION' | 'BLOCKED';
+    actionable: boolean;
+    reason: string;
+  } {
+    if (confidence >= 0.9) {
+      return { status: 'SAFE_TO_ACT', actionable: true, reason: 'High visual target confidence (>= 0.90).' };
+    } else if (confidence >= 0.75) {
+      return { status: 'RE_OBSERVE', actionable: false, reason: 'Moderate visual confidence (0.75 - 0.89); re-observation required.' };
+    } else if (confidence >= 0.5) {
+      return { status: 'NEEDS_CLARIFICATION', actionable: false, reason: 'Low visual confidence (0.50 - 0.74); action blocked without clarification.' };
+    } else {
+      return { status: 'BLOCKED', actionable: false, reason: 'Very low target confidence (< 0.50); visual action strictly BLOCKED.' };
+    }
+  }
 }

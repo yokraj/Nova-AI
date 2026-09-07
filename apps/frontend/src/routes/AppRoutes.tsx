@@ -11,6 +11,10 @@ const KnowledgePage = lazy(() => import('@/pages/KnowledgePage'));
 const RepositoriesPage = lazy(() => import('@/pages/RepositoriesPage'));
 const AgentsPage = lazy(() => import('@/pages/AgentsPage'));
 const MissionControlPage = lazy(() => import('@/pages/MissionControlPage'));
+const SkillsPage = lazy(() => import('@/pages/SkillsPage'));
+const WorkflowsPage = lazy(() => import('@/pages/WorkflowsPage'));
+const AutomationPage = lazy(() => import('@/pages/AutomationPage'));
+const ComputerControlPage = lazy(() => import('@/pages/ComputerControlPage'));
 const AnalyticsPage = lazy(() => import('@/pages/AnalyticsPage'));
 const ModelsPage = lazy(() => import('@/pages/ModelsPage'));
 const TerminalPage = lazy(() => import('@/pages/TerminalPage'));
@@ -76,6 +80,38 @@ export const AppRoutes: React.FC = () => {
           element={
             <Suspense fallback={<PageFallback />}>
               <MissionControlPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="skills"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <SkillsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="workflows"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <WorkflowsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="automation"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <AutomationPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="computer-control"
+          element={
+            <Suspense fallback={<PageFallback />}>
+              <ComputerControlPage />
             </Suspense>
           }
         />

@@ -148,6 +148,16 @@ class ResourceTelemetry(BaseModel):
     gpu_utilization_percent: float = Field(35.0)
     temperature_celsius: float = Field(52.0)
 
+    @property
+    def vram_max_mb(self) -> float:
+        return self.vram_total_mb
+
+    @property
+    def ram_max_mb(self) -> float:
+        return self.ram_total_mb
+
+
+
 
 class DownloadProgress(BaseModel):
     """Model weights download progress metrics."""

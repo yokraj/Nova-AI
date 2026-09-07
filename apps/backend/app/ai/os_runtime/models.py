@@ -62,6 +62,7 @@ class OSDashboardState(BaseModel):
     active_models: List[str] = Field(default_factory=lambda: ["qwen3:8b", "whisper-large-v3"])
     cpu_percent: float = Field(2.5)
     ram_percent: float = Field(15.0)
+    health_score: float = Field(100.0)
 
 
 class NotificationPayload(BaseModel):
@@ -85,6 +86,7 @@ class OSSecurityPolicy(BaseModel):
 
     policy_name: str = Field("default_strict")
     enforce_voice_auth: bool = Field(True)
+    enforce_approval_holds: bool = Field(True)
 
 
 class OSSession(BaseModel):
@@ -92,12 +94,16 @@ class OSSession(BaseModel):
 
     session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user: str = Field("owner")
+    user_id: str = Field("owner@nova-ai.org")
+    active_workspace: str = Field("Default Workspace")
+
 
 
 class SchedulerJob(BaseModel):
     """OS Unified Scheduler Job."""
 
-    job_id: str = Field(...)
+    job_id: str = Field(default_factory=lambda: f"job_{uuid.uuid4().hex[:8]}")
+
     name: str = Field(...)
     status: str = Field("RUNNING")
 

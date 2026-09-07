@@ -28,4 +28,4 @@ class MemoryModel(BaseEntity):
     if HAS_PGVECTOR:
         embedding: Mapped[list] = mapped_column(Vector(768), nullable=True)
     else:
-        embedding: Mapped[list] = mapped_column(ARRAY(Float), nullable=True)
+        embedding: Mapped[list] = mapped_column(JSON, nullable=True)

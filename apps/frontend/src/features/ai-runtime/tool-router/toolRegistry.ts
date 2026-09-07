@@ -426,15 +426,16 @@ export class ToolRegistry {
         domain: 'computer',
         description: 'Bring target application window to foreground focus',
         riskLevel: 'LOW',
-        parametersSchema: { windowTitle: 'string', processName: 'string' },
+        parametersSchema: { windowTitle: 'string' },
       },
       {
         name: 'computer.close_window',
         domain: 'computer',
         description: 'Close target desktop application window',
         riskLevel: 'MEDIUM',
-        parametersSchema: { windowTitle: 'string', processName: 'string' },
+        parametersSchema: { windowTitle: 'string' },
       },
+
       {
         name: 'computer.switch_application',
         domain: 'computer',

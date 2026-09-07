@@ -1,6 +1,6 @@
 """Keyboard Controller providing OS keyboard typing, key combinations, and hotkeys."""
 
-from typing import List
+from typing import Any, List
 import structlog
 
 logger = structlog.get_logger("keyboard_controller")
@@ -8,6 +8,9 @@ logger = structlog.get_logger("keyboard_controller")
 
 class KeyboardController:
     """Controls OS keyboard input, text typing, key presses, and hotkey combinations."""
+
+    def __init__(self, provider: Any = None) -> None:
+        self.provider = provider
 
     async def type_text(self, text: str) -> str:
         """Simulate typing text characters."""

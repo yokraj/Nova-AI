@@ -48,3 +48,4 @@ class ContextPackage(BaseModel):
     memory_context: str = Field("")
     project_context: str = Field("")
     code_context: str = Field("")
+    graph_context: str = Field("", description="Knowledge Graph entity and relationship summaries")

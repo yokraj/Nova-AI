@@ -1,6 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bot, Target, Monitor, Brain, Workflow } from 'lucide-react';
+import { Bot, Target, Monitor, Brain, BookOpen } from 'lucide-react';
 import NovaCore from '@/features/nova-core/components/NovaCore';
 import NovaStatus from '@/features/nova-core/components/NovaStatus';
 import { useUniversalCommand } from '@/features/universal-command/hooks/useUniversalCommand';
@@ -11,6 +11,7 @@ import PermissionPreview from '@/features/universal-command/components/Permissio
 import ExecutionProgress from '@/features/universal-command/components/ExecutionProgress';
 import ExecutionResult from '@/features/universal-command/components/ExecutionResult';
 import CommandContextDrawer from '@/features/universal-command/components/CommandContextDrawer';
+import { NovaCoreState } from '@/features/nova-core/types/novaCore';
 
 export const DashboardPage: React.FC = () => {
   const {
@@ -23,30 +24,31 @@ export const DashboardPage: React.FC = () => {
     closeDrawer,
   } = useUniversalCommand();
 
-  const getCoreState = () => {
+  const getCoreState = (): NovaCoreState => {
     if (!currentCommand) return 'IDLE';
-    if (currentCommand.executionState === 'EXECUTING') return 'EXECUTING';
-    if (currentCommand.executionState === 'UNDERSTANDING' || currentCommand.executionState === 'PLANNING') return 'THINKING';
+    if (currentCommand.executionState === 'AWAITING_APPROVAL') return 'AWAITING_APPROVAL';
+    if (currentCommand.executionState === 'COMPLETED') return 'COMPLETED';
+    if (currentCommand.executionState === 'FAILED') return 'FAILED';
+    if (currentCommand.executionState === 'EXECUTING' || currentCommand.executionState === 'VERIFYING') return 'EXECUTING';
+    if (currentCommand.executionState === 'PLANNING') return 'PLANNING';
+    if (currentCommand.executionState === 'UNDERSTANDING') return 'THINKING';
     return 'IDLE';
   };
 
   return (
-    <div className="min-h-[85vh] flex flex-col items-center justify-between py-6 px-4 relative overflow-hidden select-none">
-      {/* Background Cyber Ambient Glow */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
-
-      {/* Top Header */}
-      <div className="w-full max-w-4xl flex items-center justify-between z-10">
+    <div className="w-full max-w-4xl mx-auto min-w-0 min-h-[80vh] flex flex-col items-center justify-between py-4 px-2 relative select-none">
+      {/* Top Header Label */}
+      <div className="w-full flex items-center justify-between z-10 py-1">
         <div className="flex items-center space-x-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-          <span className="text-xs font-mono font-bold text-cyan-300 tracking-wider uppercase">
-            NOVA CORE • UNIVERSAL ASSISTANT
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+          <span className="text-[11px] font-mono font-bold text-cyan-300 tracking-wider uppercase">
+            NOVA CORE • UNIVERSAL INTELLIGENCE
           </span>
         </div>
       </div>
 
-      {/* Center Dominant Official Nova Core Visual Identity */}
-      <div className="flex flex-col items-center justify-center space-y-6 my-6 z-10 max-w-2xl text-center">
+      {/* Dominant Nova Core Orb */}
+      <div className="flex flex-col items-center justify-center space-y-4 my-4 z-10 max-w-xl text-center w-full">
         <NovaCore
           state={getCoreState()}
           onClick={() => processCommand('What can Nova do?', 'TEXT')}
@@ -54,18 +56,18 @@ export const DashboardPage: React.FC = () => {
 
         <NovaStatus
           state={getCoreState()}
-          customText={currentCommand?.executionState || 'Ready for universal commands.'}
+          customText={currentCommand?.executionState ? `Executing: ${currentCommand.rawInput}` : undefined}
         />
       </div>
 
-      {/* Dynamic Execution Pipeline Display */}
-      <AnimatePresence>
-        {currentCommand && (
+      {/* Dynamic Execution Pipeline & Compact Cards (Only visible when command active) */}
+      <AnimatePresence mode="wait">
+        {currentCommand && currentCommand.executionState !== 'IDLE' && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="w-full max-w-3xl z-10 space-y-3 my-4"
+            initial={{ opacity: 0, y: 8, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: -8, height: 0 }}
+            className="w-full max-w-2xl z-10 space-y-3 my-2"
           >
             <ExecutionProgress state={currentCommand.executionState} />
 
@@ -94,27 +96,27 @@ export const DashboardPage: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Universal Command Surface */}
-      <div className="w-full max-w-3xl z-10 space-y-4">
+      {/* Main Command Input Surface */}
+      <div className="w-full max-w-2xl z-10 space-y-3 pt-2">
         <UniversalCommandSurface
           onSubmitCommand={(cmd, src) => processCommand(cmd, src)}
         />
 
-        {/* Subdued Contextual Trigger Chips */}
-        <div className="flex items-center justify-center flex-wrap gap-2 text-xs font-mono pt-2">
+        {/* Subdued Contextual Action Chips */}
+        <div className="flex items-center justify-center flex-wrap gap-2 text-xs font-mono pt-1">
           {[
             { id: 'agents', label: 'Agents', icon: Bot },
             { id: 'missions', label: 'Missions', icon: Target },
-            { id: 'device-control', label: 'Devices', icon: Monitor },
+            { id: 'devices', label: 'Devices', icon: Monitor },
             { id: 'memory', label: 'Memory', icon: Brain },
-            { id: 'knowledge', label: 'Knowledge', icon: Workflow },
+            { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
           ].map((chip) => {
             const ChipIcon = chip.icon;
             return (
               <button
                 key={chip.id}
                 onClick={() => openDrawer(chip.id)}
-                className="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer flex items-center space-x-1.5"
+                className="px-2.5 py-1 rounded-xl bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer flex items-center space-x-1.5 text-[11px]"
               >
                 <ChipIcon className="w-3.5 h-3.5 text-cyan-400" />
                 <span>{chip.label}</span>

@@ -5,3 +5,6 @@ export interface StructuredToolCall {
   riskLevel?: 'SAFE' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   requiresApproval?: boolean;
 }
+
+export type ToolCall = StructuredToolCall;
+
