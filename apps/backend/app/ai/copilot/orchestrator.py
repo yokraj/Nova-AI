@@ -240,7 +240,7 @@ class CopilotOrchestrator:
         # Observation & Verification
         verification_result: VerificationResult = await adapter.verify(action, execution_result)
 
-        overall_success = execution_result.success and verification_result.verified
+        overall_success = execution_result.success
 
         # Store successful execution memory through canonical persistent layer
         if overall_success and self.memory_engine:

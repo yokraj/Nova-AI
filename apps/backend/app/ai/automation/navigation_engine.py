@@ -13,7 +13,7 @@ class NavigationEngine:
 
     async def navigate(self, url: str) -> str:
         """Navigate page to target URL."""
-        if not (url.startswith("http://") or url.startswith("https://") or url.startswith("about:")):
+        if not (url.startswith("http://") or url.startswith("https://") or url.startswith("about:") or url.startswith("file://")):
             url = f"https://{url}"
         self.current_url = url
         logger.info("Navigation Engine loaded page", url=url)

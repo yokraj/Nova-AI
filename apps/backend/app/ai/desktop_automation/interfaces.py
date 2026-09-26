@@ -5,7 +5,9 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from app.ai.desktop_automation.models import (
     ApplicationContext,
+    ApplicationIdentity,
     ApplicationInfo,
+    ApplicationState,
     AutomationAction,
     AutomationResult,
     BrowserSession,
@@ -170,11 +172,21 @@ class IUniversalDesktopAutomationEngine(ABC):
 
 
 class IApplicationAdapter(ABC):
-    """Minimal base contract for Application Copilot adapters (e.g. Blender, IDEs, Office).
+    """Universal base contract for Application Copilot adapters (e.g. Blender, IDEs, Office, Browsers).
 
-    Provides standard lifecycle methods: detect, get_context, get_capabilities, execute, verify.
+    Provides standard lifecycle and inspection contracts:
+    - identity: ApplicationIdentity
+    - capabilities: List[str]
+    - current_state / observe: ApplicationState
+    - action_schema / can_handle_action
+    - execute / verify
     All action execution MUST route through security permission guards.
     """
+
+    @abstractmethod
+    def get_identity(self) -> Optional[ApplicationIdentity]:
+        """Return application identity specification."""
+        pass
 
     @abstractmethod
     async def detect(self) -> bool:
@@ -192,13 +204,29 @@ class IApplicationAdapter(ABC):
         pass
 
     @abstractmethod
+    def get_action_schema(self, action_type: str) -> Dict[str, Any]:
+        """Return validation schema/specification for target action_type."""
+        pass
+
+    @abstractmethod
+    def can_handle_action(self, action: AutomationAction) -> bool:
+        """Return True if this adapter supports and can execute the given action."""
+        pass
+
+    @abstractmethod
+    async def observe(self) -> ApplicationState:
+        """Observe real-time state snapshot of the application."""
+        pass
+
+    @abstractmethod
     async def execute(self, action: AutomationAction) -> AutomationResult:
         """Execute an action through security permission guards."""
         pass
 
     @abstractmethod
     async def verify(self, action: AutomationAction, result: AutomationResult) -> VerificationResult:
-        """Perform post-execution verification."""
+        """Perform post-execution empirical state verification."""
         pass
+
 
 

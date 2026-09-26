@@ -109,7 +109,7 @@ class RuntimeRequest(BaseModel):
     """Inference request payload for specialized runtimes."""
 
     request_id: str = Field(default_factory=lambda: f"req_{uuid.uuid4().hex[:8]}")
-    model_id: str = Field(...)
+    model_id: Optional[str] = Field(None)
     prompt: str = Field("")
     inputs: Dict[str, Any] = Field(default_factory=dict)
     max_tokens: int = Field(1024)
@@ -127,6 +127,11 @@ class RuntimeResponse(BaseModel):
     token_usage: Dict[str, int] = Field(default_factory=lambda: {"total_tokens": 50})
     latency_ms: float = Field(120.0)
     device_used: DeviceType = Field(DeviceType.CUDA)
+
+    @property
+    def content(self) -> str:
+        """Helper returning string representation of text_or_data."""
+        return str(self.text_or_data or "")
 
 
 class StreamChunkResponse(BaseModel):

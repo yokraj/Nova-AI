@@ -111,6 +111,31 @@ class UniversalResearchEngine(IResearchEngine):
         """Searches local and external knowledge sources."""
         return await self.search_engine_sub.search(query, **kwargs)
 
+    async def discover_literature(
+        self,
+        query: str,
+        title: Optional[str] = None,
+        author: Optional[str] = None,
+        year: Optional[int] = None,
+        doi: Optional[str] = None,
+        limit: int = 10,
+        selected_providers: Optional[List[str]] = None,
+    ):
+        """Executes Phase 10L-A literature discovery across Crossref, OpenAlex, arXiv, and Europe PMC."""
+        return self.search_engine_sub.lit_discovery.search_literature(
+            query=query,
+            title=title,
+            author=author,
+            year=year,
+            doi=doi,
+            limit=limit,
+            selected_providers=selected_providers,
+        )
+
+    async def verify_doi(self, doi: str, expected_record: Any = None):
+        """Executes Phase 10L-A DOI validation and registry metadata comparison."""
+        return self.search_engine_sub.lit_discovery.verify_doi(doi=doi, expected_record=expected_record)
+
     async def analyze_document(self, doc_path: str) -> DocumentAnalysis:
         """Parses document into structured knowledge model."""
         return await self.doc_intelligence.analyze_document(doc_path)

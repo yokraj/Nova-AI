@@ -15,6 +15,7 @@ from app.ai.kernel.intent_engine import IntentEngine
 from app.ai.kernel.interfaces import IKernelEngine
 from app.ai.kernel.kernel_manager import KernelManager
 from app.ai.kernel.kernel_security import KernelSecurityGuard
+from app.ai.kernel.long_horizon_manager import DurableTaskState, LongHorizonTaskManager
 from app.ai.kernel.metrics import KernelMetricsTracker
 from app.ai.kernel.models import (
     CapabilityMatch,
@@ -139,15 +140,34 @@ class KernelEngine(IKernelEngine):
         if "software_copilot" in plan.intent_type:
             exec_output = await self.copilot_integration.handle_code_task(request.query)
         else:
-            exec_output = await self.runtime_coordinator.execute_plan(plan, context)
+            task_mgr = LongHorizonTaskManager.get_instance()
+            task_id = task_mgr.create_task(user_goal=request.query)
+            exec_summary = await task_mgr.execute_task_lifecycle(task_id=task_id)
+            exec_output = {
+                "task_id": exec_summary.task_id,
+                "durable_state": exec_summary.durable_state.value,
+                "executed_nodes_count": exec_summary.executed_nodes_count,
+                "goal_satisfied": exec_summary.goal_satisfied,
+                "verification_result": exec_summary.verification_result,
+                "result": f"Executed long-horizon task with status {exec_summary.durable_state.value}",
+                "error": exec_summary.error,
+            }
 
         # 8. Universal Verification
         self.health_monitor.set_state(KernelState.VERIFYING)
-        verification = await self.universal_verifier.verify_execution(
-            step_title=plan.goal,
-            check_spec="post_condition_assertion",
-            result_data=exec_output,
-        )
+        if isinstance(exec_output, dict) and "verification_result" in exec_output and exec_output["verification_result"]:
+            v_dict = exec_output["verification_result"]
+            verification = VerificationResult(
+                step_title=plan.goal,
+                verified=v_dict.get("status") == "SUCCESS",
+                details=str(v_dict),
+            )
+        else:
+            verification = await self.universal_verifier.verify_execution(
+                step_title=plan.goal,
+                check_spec="post_condition_assertion",
+                result_data=exec_output,
+            )
 
         status_code = "completed" if verification.verified else "failed"
         await self.event_bus.publish(

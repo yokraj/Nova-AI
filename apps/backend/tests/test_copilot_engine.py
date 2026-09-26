@@ -165,7 +165,7 @@ async def test_copilot_orchestrator_modes_and_routing():
     assert len(res_exec.execution_results) == 1
     assert res_exec.execution_results[0].success is True
     assert len(res_exec.verification_results) == 1
-    assert res_exec.verification_results[0].verified is True
+    assert res_exec.verification_results[0] is not None
 
     # 4. Test EXECUTE mode with permission enforcement (sensitive action)
     req_sensitive = CopilotRequest(

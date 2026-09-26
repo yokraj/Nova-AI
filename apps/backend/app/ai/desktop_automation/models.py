@@ -147,10 +147,19 @@ class AutomationAction(BaseModel):
 
     action_id: str = Field(default_factory=lambda: f"act_{uuid.uuid4().hex[:8]}")
     action_type: str = Field("click")
-    target_label: str = Field(...)
+    target_label: str = Field(default="")
     selector: Dict[str, Any] = Field(default_factory=dict)
     value: Optional[Any] = Field(None)
     timeout_sec: float = Field(10.0)
+
+    @property
+    def parameters(self) -> Dict[str, Any]:
+        """Accessor property returning selector parameters or value dict."""
+        if isinstance(self.selector, dict) and self.selector:
+            return self.selector
+        if self.value is not None:
+            return {"value": self.value}
+        return {}
 
 
 class AutomationResult(BaseModel):
@@ -373,4 +382,30 @@ class GoalPlanStep(BaseModel):
     action_type: str = Field(...)
     parameters: Dict[str, Any] = Field(default_factory=dict)
     status: ActionStatus = Field(ActionStatus.PENDING)
+
+
+class ApplicationIdentity(BaseModel):
+    """Canonical identity representation of a desktop application/process."""
+
+    app_name: str = Field(...)
+    bundle_id: Optional[str] = Field(None, description="AppX package family name, bundle ID, or process name")
+    executable_name: str = Field(...)
+    executable_path: Optional[str] = Field(None)
+    process_id: Optional[int] = Field(None)
+    window_class: Optional[str] = Field(None)
+    architecture: Optional[str] = Field(None)
+    is_elevated: bool = Field(False)
+
+
+class ApplicationState(BaseModel):
+    """Real-time observed state snapshot of an application."""
+
+    identity: Optional[ApplicationIdentity] = Field(None)
+    is_running: bool = Field(False)
+    is_active: bool = Field(False)
+    window_title: Optional[str] = Field(None)
+    window_bounds: Optional[Dict[str, int]] = Field(None)
+    active_view: Optional[str] = Field(None)
+    last_observed_at: float = Field(default_factory=time.time)
+
 

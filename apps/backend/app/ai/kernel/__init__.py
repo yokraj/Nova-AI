@@ -6,7 +6,6 @@ event bus, OS memory, copilot integration, voice orchestrator, security guard, o
 and central KernelEngine.
 """
 
-import sys
 from typing import Any
 from app.ai.kernel.utils import lazy_import
 
@@ -60,6 +59,23 @@ __all__ = [
     "MockKernelProvider",
     "KernelManager",
     "KernelEngine",
+    # Phase 10F Plan Critic & Goal Verifier
+    "PlanCritic",
+    "PlanCriticResult",
+    "CriticStatus",
+    "GoalVerifier",
+    "GoalVerificationResult",
+    "GoalRequirement",
+    "VerificationType",
+    "VerificationStatus",
+    # Phase 10G Failure Diagnoser & Dynamic Replanner
+    "FailureDiagnoser",
+    "FailureDiagnosis",
+    "FailureType",
+    "Recoverability",
+    "ExecutionControlState",
+    "DynamicReplanner",
+    "ReplanResult",
 ]
 
 

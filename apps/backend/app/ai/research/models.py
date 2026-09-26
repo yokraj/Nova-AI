@@ -277,3 +277,79 @@ class ResearchHealth(BaseModel):
     graph_nodes_count: int = Field(0)
     graph_edges_count: int = Field(0)
     timestamp: float = Field(default_factory=time.time)
+
+
+class ScholarlyProviderStatus(str, Enum):
+    """Execution status for scholarly metadata provider."""
+
+    SUCCESS = "SUCCESS"
+    PARTIAL = "PARTIAL"
+    FAILED = "FAILED"
+    TIMED_OUT = "TIMED_OUT"
+    RATE_LIMITED = "RATE_LIMITED"
+    NO_RESULTS = "NO_RESULTS"
+
+
+class ScholarlySourceRecord(BaseModel):
+    """Normalized scholarly source record containing provenance and field validation metadata."""
+
+    source_id: str = Field(default_factory=lambda: f"scholarly_{uuid.uuid4().hex[:12]}")
+    title: str = Field(...)
+    authors: List[str] = Field(default_factory=list)
+    publication_year: Optional[int] = Field(None)
+    doi: Optional[str] = Field(None)
+    canonical_url: Optional[str] = Field(None)
+    abstract: Optional[str] = Field(None)
+    venue: Optional[str] = Field(None)
+    provider: str = Field("unknown")
+    retrieval_timestamp: float = Field(default_factory=time.time)
+    retrieved_fields: List[str] = Field(default_factory=list)
+    source_record_url: Optional[str] = Field(None)
+    metadata_validation_status: str = Field("UNVERIFIED")
+    full_text_status: str = Field("UNAVAILABLE")
+    full_text_url: Optional[str] = Field(None)
+    raw_provider_id: Optional[str] = Field(None)
+    raw_metadata: Optional[Dict[str, Any]] = Field(None)
+    is_untrusted_data: bool = Field(True)
+    prompt_injection_flagged: bool = Field(False)
+    contributing_providers: List[str] = Field(default_factory=list)
+    provider_raw_ids: Dict[str, str] = Field(default_factory=dict)
+    relevance_score: float = Field(0.0)
+    match_type: str = Field("TOPIC_MATCH")
+    match_explanation: str = Field("")
+
+
+class DOIVerificationResult(BaseModel):
+    """Result of syntactic validation, registry resolution, identity match, and metadata agreement check."""
+
+    doi: str = Field(...)
+    normalized_doi: Optional[str] = Field(None)
+    is_syntactically_valid: bool = Field(False)
+    is_resolved: bool = Field(False)
+    returned_doi_match: bool = Field(False)
+    resolved_title: Optional[str] = Field(None)
+    resolved_authors: List[str] = Field(default_factory=list)
+    resolved_year: Optional[int] = Field(None)
+    resolved_url: Optional[str] = Field(None)
+    title_agreement: str = Field("NOT_CHECKED")  # EXACT, SIMILAR, MISMATCH, NOT_CHECKED
+    author_agreement: str = Field("NOT_CHECKED") # AGREED, PARTIAL, MISMATCH, NOT_CHECKED
+    year_agreement: str = Field("NOT_CHECKED")   # AGREED, MISMATCH, NOT_CHECKED
+    metadata_agreement: str = Field("UNRESOLVED") # Primary agreement field
+    overall_metadata_agreement: str = Field("UNRESOLVED") # Explicit alias for overall agreement
+    mismatch_details: List[str] = Field(default_factory=list)
+    registry_provider: str = Field("none")
+    verification_timestamp: float = Field(default_factory=time.time)
+
+
+class LiteratureSearchResult(BaseModel):
+    """Structured result of multi-provider literature search."""
+
+    search_id: str = Field(default_factory=lambda: f"litsearch_{uuid.uuid4().hex[:8]}")
+    query: str = Field(...)
+    total_found: int = Field(0)
+    deduplicated_count: int = Field(0)
+    sources: List[ScholarlySourceRecord] = Field(default_factory=list)
+    provider_statuses: Dict[str, ScholarlyProviderStatus] = Field(default_factory=dict)
+    duration_sec: float = Field(0.0)
+    executed_at: float = Field(default_factory=time.time)
+

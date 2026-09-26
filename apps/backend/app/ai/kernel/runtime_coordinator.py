@@ -54,6 +54,24 @@ class RuntimeCoordinator(IRuntimeCoordinator):
                 "files_modified": ["app/main.py"],
             }
         elif "desktop" in subsystem:
+            from app.ai.desktop_automation.application_adapter import ApplicationAdapterRegistry
+            from app.ai.desktop_automation.models import AutomationAction
+            registry = ApplicationAdapterRegistry.get_instance()
+            target_app = node.parameters.get("target_label", "Blender")
+            adapter = registry.get_adapter(target_app)
+            if adapter:
+                act = AutomationAction(
+                    action_id=f"act_{node.node_id}",
+                    action_type=node.action_type or "desktop:execute",
+                    parameters=node.parameters,
+                    target_label=target_app,
+                )
+                act_res = await adapter.execute_action(act) if hasattr(adapter.execute_action, "__await__") else adapter.execute_action(act)
+                return {
+                    "subsystem": "desktop_automation",
+                    "result": act_res.model_dump() if hasattr(act_res, "model_dump") else str(act_res),
+                    "status": "success" if getattr(act_res, "success", True) else "failed",
+                }
             return {
                 "subsystem": "desktop_automation",
                 "result": f"Executed desktop command: {node.parameters.get('command', '')}",
