@@ -8,6 +8,7 @@ import asyncio
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
+import pytest
 from fastapi import WebSocket
 from fastapi.testclient import TestClient
 from fastapi.websockets import WebSocketState
@@ -115,6 +116,7 @@ def test_connection_manager_sync_methods():
     assert "resources" not in mgr.list_subscriptions(conn1.connection_id)
 
 
+@pytest.mark.asyncio
 async def test_async_broadcasting_flow():
     """Test ConnectionManager and DashboardBroadcaster async broadcasting."""
     mgr = ConnectionManager()

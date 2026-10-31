@@ -61,6 +61,7 @@ class BaseRepository(Generic[ModelType]):
             The added model object instance.
         """
         self.session.add(entity)
+        await self.session.flush()
         return entity
 
     async def delete(self, id: Any) -> Optional[ModelType]:

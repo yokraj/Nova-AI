@@ -54,6 +54,13 @@ __all__ = [
     # Utilities
     "VoiceCache",
     "calculate_audio_hash",
+    # Conversational Real-Time Assistant (Phase 10M-B)
+    "ConversationalVoiceAssistant",
+    "StreamingAudioReceiver",
+    "VoiceActivityDetector",
+    "ConversationalWakeWordEngine",
+    "SpeechIntelligenceEngine",
+    "AcousticEchoCancellationGuard",
 ]
 
 # ---------------------------------------------------------------------------
@@ -97,6 +104,13 @@ _LAZY: dict[str, tuple[str, str]] = {
     # Utilities
     "VoiceCache":               (".cache",                           "VoiceCache"),
     "calculate_audio_hash":     (".utils",                           "calculate_audio_hash"),
+    # Conversational Real-Time Assistant (Phase 10M-B)
+    "ConversationalVoiceAssistant": (".conversational.assistant",    "ConversationalVoiceAssistant"),
+    "StreamingAudioReceiver":       (".conversational.audio_stream", "StreamingAudioReceiver"),
+    "VoiceActivityDetector":        (".conversational.vad",          "VoiceActivityDetector"),
+    "ConversationalWakeWordEngine": (".conversational.wake_word",    "ConversationalWakeWordEngine"),
+    "SpeechIntelligenceEngine":     (".conversational.speech_intelligence", "SpeechIntelligenceEngine"),
+    "AcousticEchoCancellationGuard": (".conversational.echo_canceller", "AcousticEchoCancellationGuard"),
 }
 
 

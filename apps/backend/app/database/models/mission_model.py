@@ -22,7 +22,7 @@ class MissionModel(BaseEntity):
     metadata_json: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
 
     tasks = relationship(
-        "MissionTaskModel", back_populates="mission", cascade="all, delete-orphan"
+        "MissionTaskModel", back_populates="mission", cascade="all, delete-orphan", lazy="selectin"
     )
 
 

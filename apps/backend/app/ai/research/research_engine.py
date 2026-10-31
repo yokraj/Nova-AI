@@ -1,14 +1,19 @@
 """Central Universal Research Engine facade unifying knowledge collection, verification, reasoning, and reports.
 """
 
+from pathlib import Path
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from app.ai.research.cache import ResearchCache
 from app.ai.research.citation_engine import CitationEngine
 from app.ai.research.configuration import ResearchConfiguration
 from app.ai.research.document_intelligence import DocumentIntelligence
 from app.ai.research.health import ResearchHealthMonitor
 from app.ai.research.interfaces import IResearchEngine
+from app.ai.research.evidence_graph_builder import EvidenceGraphBuilder
+from app.ai.research.answer_synthesizer import EvidenceGroundedSynthesizer
+from app.ai.research.intelligent_report_generator import IntelligentReportGenerator
+from app.ai.research.report_exporter import ResearchReportExporter
 from app.ai.research.knowledge_collector import KnowledgeCollector
 from app.ai.research.knowledge_graph import KnowledgeGraph
 from app.ai.research.knowledge_packages import KnowledgePackageManager
@@ -16,14 +21,20 @@ from app.ai.research.metrics import ResearchMetricsTracker
 from app.ai.research.models import (
     CitationItem,
     DocumentAnalysis,
+    GroundedAnswerSynthesis,
     KnowledgePackage,
     KnowledgeSource,
+    ReportDetailLevel,
+    ReportExportFormat,
+    ReportExportResult,
     RepositorySummary,
     ResearchHealth,
     ResearchMemoryItem,
     ResearchMetrics,
     ResearchReport,
     ResearchState,
+    StructuredResearchReport,
+    SynthesisMode,
 )
 from app.ai.research.reasoning_engine import ReasoningEngine
 from app.ai.research.report_generator import ReportGenerator
@@ -58,6 +69,13 @@ class UniversalResearchEngine(IResearchEngine):
         self.metrics_tracker = ResearchMetricsTracker()
         self.health_monitor = ResearchHealthMonitor()
         self.cache = ResearchCache(ttl_seconds=self.config.cache_ttl_seconds)
+        self.evidence_builder = EvidenceGraphBuilder(graph=self.graph)
+        self.synthesizer = EvidenceGroundedSynthesizer(lit_discovery=self.search_engine_sub.lit_discovery)
+        self.report_exporter = ResearchReportExporter()
+        self.intelligent_report_generator = IntelligentReportGenerator(
+            synthesizer=self.synthesizer,
+            exporter=self.report_exporter,
+        )
 
         self._active_citations: List[CitationItem] = []
 
@@ -151,6 +169,125 @@ class UniversalResearchEngine(IResearchEngine):
     async def knowledge_graph(self) -> Dict[str, Any]:
         """Returns local Knowledge Graph node and edge counts."""
         return self.graph.export_graph_summary()
+
+    def build_evidence_graph(
+        self,
+        records: Optional[List[Any]] = None,
+    ) -> EvidenceGraphBuilder:
+        """Constructs or updates the evidence and provenance graph from scholarly sources (Phase 10L-B)."""
+        if records:
+            self.evidence_builder.build_from_scholarly_records(records)
+        return self.evidence_builder
+
+    def get_evidence_graph(self) -> EvidenceGraphBuilder:
+        """Returns the active EvidenceGraphBuilder instance (Phase 10L-B)."""
+        return self.evidence_builder
+
+    async def synthesize_answer(
+        self,
+        question: str,
+        sources: Optional[List[Any]] = None,
+        mode: SynthesisMode = SynthesisMode.GROUNDED_STRICT,
+        candidate_claims: Optional[List[str]] = None,
+        max_sources: int = 8,
+        model_id: str = "qwen3:8b",
+        **kwargs: Any,
+    ) -> GroundedAnswerSynthesis:
+        """Executes Phase 10L-C Evidence-Grounded Research Answer Synthesis.
+
+        Args:
+            question: Complex research inquiry or question.
+            sources: Pre-retrieved source records or None.
+            mode: SynthesisMode (GROUNDED_STRICT, BALANCED, EXPLORATORY).
+            candidate_claims: Optional list of specific claims to evaluate.
+            max_sources: Maximum scholarly sources to retrieve/ingest.
+            model_id: Local Ollama model ID (default 'qwen3:8b').
+
+        Returns:
+            GroundedAnswerSynthesis payload with claim-level citations and provenance.
+        """
+        return await self.synthesizer.synthesize(
+            question=question,
+            sources=sources,
+            evidence_builder=self.evidence_builder,
+            mode=mode,
+            candidate_claims=candidate_claims,
+            max_sources=max_sources,
+            model_id=model_id,
+        )
+
+    async def generate_research_report(
+        self,
+        question_or_synthesis: Union[str, GroundedAnswerSynthesis],
+        sources: Optional[List[Any]] = None,
+        detail_level: ReportDetailLevel = ReportDetailLevel.COMPREHENSIVE,
+        candidate_claims: Optional[List[str]] = None,
+        title: Optional[str] = None,
+        model_id: str = "qwen3:8b",
+        export_formats: Optional[List[ReportExportFormat]] = None,
+        output_dir: Optional[Union[str, Path]] = None,
+        base_filename: Optional[str] = None,
+        **kwargs: Any,
+    ) -> StructuredResearchReport:
+        """Executes Phase 10L-D Intelligent Research Report Generation & Export.
+
+        Args:
+            question_or_synthesis: Raw inquiry string or pre-computed GroundedAnswerSynthesis.
+            sources: Optional scholarly source records.
+            detail_level: ReportDetailLevel (SHORT, DETAILED, COMPREHENSIVE).
+            candidate_claims: Optional explicit claims to evaluate.
+            title: Custom title for report.
+            model_id: Local Ollama model ID (default 'qwen3:8b').
+            export_formats: List of formats to export (MARKDOWN, HTML, PDF, ALL).
+            output_dir: Directory to save exported files.
+            base_filename: Base filename prefix for export files.
+
+        Returns:
+            StructuredResearchReport model containing all sections and export paths.
+        """
+        if isinstance(question_or_synthesis, GroundedAnswerSynthesis):
+            report = await self.intelligent_report_generator.generate_from_synthesis(
+                synthesis=question_or_synthesis,
+                detail_level=detail_level,
+                title=title,
+                model_id=model_id,
+            )
+            if export_formats and output_dir:
+                out_p = Path(output_dir)
+                out_p.mkdir(parents=True, exist_ok=True)
+                fname = base_filename or f"report_{report.report_id}"
+                if ReportExportFormat.ALL in export_formats or (
+                    ReportExportFormat.MARKDOWN in export_formats
+                    and ReportExportFormat.HTML in export_formats
+                    and ReportExportFormat.PDF in export_formats
+                ):
+                    self.report_exporter.export_all(report, out_p, fname)
+                else:
+                    if ReportExportFormat.MARKDOWN in export_formats:
+                        md_path = out_p / f"{fname}.md"
+                        self.report_exporter.export_markdown(report, md_path)
+                        report.export_files["markdown"] = str(md_path)
+                    if ReportExportFormat.HTML in export_formats:
+                        html_path = out_p / f"{fname}.html"
+                        self.report_exporter.export_html(report, html_path)
+                        report.export_files["html"] = str(html_path)
+                    if ReportExportFormat.PDF in export_formats:
+                        pdf_path = out_p / f"{fname}.pdf"
+                        self.report_exporter.export_pdf(report, pdf_path)
+                        report.export_files["pdf"] = str(pdf_path)
+            return report
+        else:
+            return await self.intelligent_report_generator.generate_report(
+                question=question_or_synthesis,
+                sources=sources,
+                detail_level=detail_level,
+                candidate_claims=candidate_claims,
+                title=title,
+                model_id=model_id,
+                export_formats=export_formats,
+                output_dir=output_dir,
+                base_filename=base_filename,
+            )
 
     async def citations(self) -> List[CitationItem]:
         """Retrieves active citations list."""

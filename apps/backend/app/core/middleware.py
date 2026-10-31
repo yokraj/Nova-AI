@@ -95,26 +95,23 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 def register_middleware(app: FastAPI) -> None:
     """Registers all middleware layers onto the FastAPI application.
 
-    Args:
-        app: The FastAPI application instance to register middleware on.
+    Middleware in Starlette executes in reverse order of registration (last added is outermost).
+    CORSMiddleware is added last so it wraps all inner middlewares and endpoints, guaranteeing
+    proper handling of CORS preflight OPTIONS requests and ensuring Access-Control-* headers
+    are always attached to every response (including errors).
     """
-    # 1. Custom Request Tracing & Timing
+    # 1. Custom Request Tracing & Timing (innermost)
     app.add_middleware(RequestTracingMiddleware)
 
-    # 2. CORS Policy Middleware
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.BACKEND_CORS_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    # 3. HTTP Security Headers
+    # 2. HTTP Security Headers
     app.add_middleware(SecurityHeadersMiddleware)
 
-    # 4. GZip Response Compression
+    # 3. GZip Response Compression
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+    # 4. Dashboard Security Middleware (Rate limiting, audit logging)
+    from app.security import DashboardSecurityMiddleware
+    app.add_middleware(DashboardSecurityMiddleware)
 
     # 5. Trusted Host validation (active in production mode)
     if not settings.DEBUG:
@@ -122,3 +119,12 @@ def register_middleware(app: FastAPI) -> None:
             TrustedHostMiddleware,
             allowed_hosts=[settings.HOST, "localhost", "127.0.0.1", "testserver"],
         )
+
+    # 6. CORS Policy Middleware (outermost)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.BACKEND_CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )

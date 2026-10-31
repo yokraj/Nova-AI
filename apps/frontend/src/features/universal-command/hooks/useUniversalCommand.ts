@@ -3,23 +3,61 @@ import { UniversalCommand, CommandSource } from '../types/command';
 import { MockCommandRouter } from '../mock/mockCommandRouter';
 import { MockExecutionEngine } from '../mock/mockExecutionEngine';
 import { AgentRuntime } from '../../ai-runtime/runtime/agentRuntime';
+import { ToolPermissionGuard } from '../../ai-runtime/security/toolPermissionGuard';
 
 export const useUniversalCommand = () => {
   const [router] = useState(() => new MockCommandRouter());
   const [engine] = useState(() => new MockExecutionEngine());
   const [agentRuntime] = useState(() => new AgentRuntime());
+  const [permissionGuard] = useState(() => new ToolPermissionGuard());
+
   const [currentCommand, setCurrentCommand] = useState<UniversalCommand | null>(null);
   const [commandHistory, setCommandHistory] = useState<UniversalCommand[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerDomain, setDrawerDomain] = useState<string | null>(null);
+  const [isExecuting, setIsExecuting] = useState(false);
+
+  const cancelExecution = useCallback(() => {
+    agentRuntime.cancelExecution();
+    setIsExecuting(false);
+    if (currentCommand) {
+      const cancelledCmd: UniversalCommand = {
+        ...currentCommand,
+        executionState: 'CANCELLED',
+        result: {
+          success: false,
+          message: 'Execution cancelled by operator.',
+          durationSeconds: 0.1,
+          errorReason: 'USER_CANCELLED',
+        },
+      };
+      setCurrentCommand(cancelledCmd);
+      setCommandHistory((prev) => [cancelledCmd, ...prev]);
+    }
+  }, [agentRuntime, currentCommand]);
 
   const processCommand = useCallback(
-    async (rawInput: string, source: CommandSource = 'TEXT') => {
-      // Step 1: Route Command (Understanding, Intent, Capability, Permission & Risk, Plan)
+    async (
+      rawInput: string,
+      source: CommandSource = 'TEXT',
+      attachments?: { files?: any[]; vision?: any }
+    ) => {
+      if (!rawInput.trim()) return;
+      setIsExecuting(true);
+
+      // Step 1: Canonical Command Understanding & Plan Routing
       const cmd = router.routeCommand(rawInput, source);
+      if (attachments) {
+        cmd.context = {
+          ...cmd.context,
+          attachments: attachments.files || [],
+          vision: attachments.vision || null,
+        };
+      }
+
       setCurrentCommand(cmd);
 
-      // Check if command is requesting a subsystem view
+      // Check if command is requesting a subsystem navigation view
       const lower = rawInput.toLowerCase();
       if (lower.includes('show agent') || lower.includes('view agent')) {
         setDrawerDomain('agents');
@@ -33,6 +71,21 @@ export const useUniversalCommand = () => {
       } else if (lower.includes('show memory') || lower.includes('view memory')) {
         setDrawerDomain('memory');
         setIsDrawerOpen(true);
+      }
+
+      // Check tool permission guard requirements
+      const requiresPermission =
+        cmd.permission?.requiresApproval ||
+        (cmd.capability?.type === 'SYSTEM_CONTROL' && cmd.permission?.riskLevel === 'HIGH');
+
+      if (requiresPermission) {
+        const awaitingCmd: UniversalCommand = {
+          ...cmd,
+          executionState: 'AWAITING_APPROVAL',
+        };
+        setCurrentCommand(awaitingCmd);
+        setIsExecuting(false);
+        return;
       }
 
       // Step 2: Canonical Real AI Execution via AgentRuntime
@@ -50,12 +103,12 @@ export const useUniversalCommand = () => {
         setCurrentCommand(updatedCmd);
         setCommandHistory((prev) => [updatedCmd, ...prev]);
       } catch {
-        // Fallback to engine if runtime throws
-        if (!cmd.permission?.requiresApproval) {
-          const executed = await engine.executeCommand(cmd);
-          setCurrentCommand(executed);
-          setCommandHistory((prev) => [executed, ...prev]);
-        }
+        // Fallback execution engine if runtime throws
+        const executed = await engine.executeCommand(cmd);
+        setCurrentCommand(executed);
+        setCommandHistory((prev) => [executed, ...prev]);
+      } finally {
+        setIsExecuting(false);
       }
     },
     [router, engine, agentRuntime]
@@ -63,11 +116,52 @@ export const useUniversalCommand = () => {
 
   const approveCurrentCommand = useCallback(async () => {
     if (!currentCommand) return;
-    const approvedCmd = { ...currentCommand, executionState: 'UNDERSTANDING' as const };
-    const executed = await engine.executeCommand(approvedCmd);
-    setCurrentCommand(executed);
-    setCommandHistory((prev) => [executed, ...prev]);
-  }, [currentCommand, engine]);
+    setIsExecuting(true);
+
+    const approvedCmd: UniversalCommand = {
+      ...currentCommand,
+      executionState: 'EXECUTING',
+    };
+    setCurrentCommand(approvedCmd);
+
+    try {
+      const agentResult = await agentRuntime.executeGoal(currentCommand.rawInput);
+      const finishedCmd: UniversalCommand = {
+        ...approvedCmd,
+        executionState: agentResult.success ? 'COMPLETED' : 'FAILED',
+        result: {
+          success: agentResult.success,
+          message: agentResult.summary,
+          durationSeconds: 0.6,
+        },
+      };
+      setCurrentCommand(finishedCmd);
+      setCommandHistory((prev) => [finishedCmd, ...prev]);
+    } catch {
+      const executed = await engine.executeCommand(approvedCmd);
+      setCurrentCommand(executed);
+      setCommandHistory((prev) => [executed, ...prev]);
+    } finally {
+      setIsExecuting(false);
+    }
+  }, [currentCommand, agentRuntime, engine]);
+
+  const rejectCurrentCommand = useCallback(() => {
+    if (!currentCommand) return;
+    const deniedCmd: UniversalCommand = {
+      ...currentCommand,
+      executionState: 'DENIED',
+      result: {
+        success: false,
+        message: 'Command execution authorization was denied by operator.',
+        durationSeconds: 0.1,
+        errorReason: 'SECURITY_APPROVAL_DENIED',
+      },
+    };
+    setCurrentCommand(deniedCmd);
+    setCommandHistory((prev) => [deniedCmd, ...prev]);
+    setIsExecuting(false);
+  }, [currentCommand]);
 
   const openDrawer = (domain?: string) => {
     if (domain) setDrawerDomain(domain);
@@ -81,8 +175,11 @@ export const useUniversalCommand = () => {
   return {
     currentCommand,
     commandHistory,
+    isExecuting,
     processCommand,
     approveCurrentCommand,
+    rejectCurrentCommand,
+    cancelCommand: cancelExecution,
     isDrawerOpen,
     drawerDomain,
     openDrawer,

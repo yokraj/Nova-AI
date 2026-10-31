@@ -4,15 +4,15 @@ Defines role permissions, extracts user claims from authorization tokens,
 and checks role rights using FastAPI path dependencies.
 """
 
-from typing import Dict, Set
+from typing import Dict, Optional, Set
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 
 from app.identity.infrastructure.security import decode_access_token
 
-# Bearer token HTTP adapter configuration
-security_scheme = HTTPBearer()
+# Bearer token HTTP adapter configuration (auto_error=False to allow dev fallback)
+security_scheme = HTTPBearer(auto_error=False)
 
 # Role permissions matrix
 ROLE_PERMISSIONS: Dict[str, Set[str]] = {
@@ -83,7 +83,7 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
 
 
 async def get_current_user_claims(
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
 ) -> dict:
     """Decodes access token credentials and validates user session claims.
 
@@ -94,23 +94,34 @@ async def get_current_user_claims(
         A dictionary containing resolved user claims (user_id, role).
 
     Raises:
-        HTTPException: If the token is invalid or expired.
+        HTTPException: If the token is invalid or expired, or unauthenticated in production.
     """
-    try:
-        payload = decode_access_token(credentials.credentials)
-        user_id = payload.get("sub")
-        role = payload.get("role", "user")
-        if not user_id:
+    if credentials and credentials.credentials:
+        try:
+            payload = decode_access_token(credentials.credentials)
+            user_id = payload.get("sub")
+            role = payload.get("role", "user")
+            if not user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token claims: subject missing.",
+                )
+            return {"user_id": str(user_id), "role": role}
+        except JWTError as error:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token claims: subject missing.",
+                detail=f"Could not validate credentials: {str(error)}",
             )
-        return {"user_id": user_id, "role": role}
-    except JWTError as error:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Could not validate credentials: {str(error)}",
-        )
+
+    # In development mode, allow unauthenticated local dev requests with default admin role
+    from app.core.config import settings
+    if settings.DEBUG:
+        return {"user_id": "00000000-0000-0000-0000-000000000001", "role": "admin"}
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated",
+    )
 
 
 class PermissionChecker:

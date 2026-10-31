@@ -41,10 +41,7 @@ class ModelSelector:
         if "Vision" in required_capabilities:
             return {"model": "gpt-4o", "provider": "openai", "reason": "Vision capability required"}
 
-        if task_category in ["Coding", "Debugging", "Architecture"]:
-            return {"model": "llama3.1:70b", "provider": "vllm", "reason": "High-performance coding model"}
-
-        # Default local model selection
+        # Default local-first model selection using active local model (e.g. qwen3:8b via Ollama)
         return {
             "model": self.config.default_model,
             "provider": self.config.default_provider,

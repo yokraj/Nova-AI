@@ -30,7 +30,7 @@ from app.inference.schemas import (
     InferenceStatisticsResponse,
 )
 
-router = APIRouter(prefix="/api/v1/inference", tags=["Enterprise Inference Gateway"])
+router = APIRouter(prefix="/inference", tags=["Enterprise Inference Gateway"])
 
 # Permission dependencies
 require_inference_chat = Depends(PermissionChecker("inference:chat"))
@@ -49,7 +49,7 @@ async def chat_inference(request: ChatInferenceRequest, db: AsyncSession = Depen
 async def stream_inference(request: ChatInferenceRequest, db: AsyncSession = Depends(get_db)) -> Any:
     """Streams SSE token completion chunks for prompt query."""
     service = StreamingService(repository=InferenceRepository(db))
-    model = request.model or "llama3.2"
+    model = request.model or "qwen3:8b"
     provider = request.provider or "ollama"
 
     async def event_generator():

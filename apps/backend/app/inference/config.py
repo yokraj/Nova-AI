@@ -4,6 +4,7 @@ Defines Pydantic settings for default local providers (Ollama, llama.cpp, vLLM, 
 cloud provider credentials, GPU scheduling bounds, retry parameters, and circuit breakers.
 """
 
+import os
 from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
@@ -13,8 +14,14 @@ class InferenceConfig(BaseModel):
 
     # Default Local Provider & Model Selection
     default_provider: str = Field(default="ollama", description="Default LLM provider (ollama, vllm, openai)")
-    default_model: str = Field(default="llama3.2", description="Default LLM model name")
-    ollama_base_url: str = Field(default="http://localhost:11434", description="Ollama API base URL")
+    default_model: str = Field(
+        default_factory=lambda: os.getenv("AI_DEFAULT_MODEL", "qwen3:8b"),
+        description="Default LLM model name",
+    )
+    ollama_base_url: str = Field(
+        default_factory=lambda: os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
+        description="Ollama API base URL",
+    )
     vllm_base_url: str = Field(default="http://localhost:8000", description="vLLM API base URL")
     openai_compatible_base_url: str = Field(default="http://localhost:1234/v1", description="OpenAI-compatible server URL")
 
@@ -27,7 +34,7 @@ class InferenceConfig(BaseModel):
     max_gpu_allocation: int = Field(default=4, description="Maximum available GPUs for scheduling")
     max_vram_reservation_mb: int = Field(default=24576, description="Max VRAM allocation per GPU (24GB)")
     max_concurrent_requests: int = Field(default=1000, description="Max concurrent request limit")
-    gateway_timeout_seconds: float = Field(default=60.0, description="Request gateway timeout threshold")
+    gateway_timeout_seconds: float = Field(default=120.0, description="Request gateway timeout threshold")
 
     # Circuit Breaker & Retry Settings
     max_retries: int = Field(default=3, description="Max retry attempts on failure")

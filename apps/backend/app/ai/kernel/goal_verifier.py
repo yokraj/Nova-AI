@@ -13,6 +13,7 @@ Unobservable state returns UNVERIFIED / UNKNOWN with confidence 0.0.
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+import re
 from typing import Any, Dict, List, Optional
 import time
 
@@ -51,6 +52,11 @@ class VerificationType(str, Enum):
     RESEARCH_SOURCE_RECORD_VALID = "RESEARCH_SOURCE_RECORD_VALID"
     RESEARCH_DOI_MATCH = "RESEARCH_DOI_MATCH"
     RESEARCH_PROVENANCE_PRESERVED = "RESEARCH_PROVENANCE_PRESERVED"
+    RESEARCH_CLAIM_VERIFIED = "RESEARCH_CLAIM_VERIFIED"
+    RESEARCH_PROVENANCE_GRAPH_VALID = "RESEARCH_PROVENANCE_GRAPH_VALID"
+    RESEARCH_SYNTHESIS_GROUNDED = "RESEARCH_SYNTHESIS_GROUNDED"
+    RESEARCH_CITATION_MAPPING_VALID = "RESEARCH_CITATION_MAPPING_VALID"
+    RESEARCH_CONTRADICTION_DETECTED = "RESEARCH_CONTRADICTION_DETECTED"
 
 
 
@@ -79,12 +85,15 @@ class GoalRequirement:
     operator: str = "AND"  # For MULTI_CONDITION: "AND" or "OR"
     req_id: Optional[str] = None
     target_state: Optional[str] = None
+    parameters: Optional[Dict[str, Any]] = None
 
     def __post_init__(self):
         if self.req_id and not self.requirement_id:
             self.requirement_id = self.req_id
         if self.target_state and not self.expected_value:
             self.expected_value = self.target_state
+        if self.parameters and not self.condition_params:
+            self.condition_params = self.parameters
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -335,6 +344,12 @@ class GoalVerifier:
             model_used=model_used,
         )
 
+    def evaluate_requirement(self, req: GoalRequirement) -> GoalRequirementResult:
+        """Evaluates a single GoalRequirement directly against ground-truth evidence."""
+        evidence: Dict[str, Any] = {}
+        snapshot = self.world_state_engine.get_snapshot()
+        return self._evaluate_requirement(req, snapshot, None, [], evidence)
+
     def _evaluate_requirement(
         self,
         req: GoalRequirement,
@@ -541,17 +556,22 @@ class GoalVerifier:
                 )
 
         # -------------------------------------------------------------
-        # 0c. RESEARCH Verification Types (Phase 10L-A)
+        # 0c. RESEARCH Verification Types (Phase 10L-A, 10L-B, 10L-C)
         # -------------------------------------------------------------
         if vtype in (
             VerificationType.RESEARCH_SEARCH_COMPLETED,
             VerificationType.RESEARCH_SOURCE_RECORD_VALID,
             VerificationType.RESEARCH_DOI_MATCH,
             VerificationType.RESEARCH_PROVENANCE_PRESERVED,
+            VerificationType.RESEARCH_CLAIM_VERIFIED,
+            VerificationType.RESEARCH_PROVENANCE_GRAPH_VALID,
+            VerificationType.RESEARCH_SYNTHESIS_GROUNDED,
+            VerificationType.RESEARCH_CITATION_MAPPING_VALID,
+            VerificationType.RESEARCH_CONTRADICTION_DETECTED,
         ):
-            search_res = params.get("search_result") or adapter_state.get("lit_search_result") or {}
-            doi_res = params.get("doi_result") or adapter_state.get("doi_verification_result") or {}
-            source_rec = params.get("source_record") or adapter_state.get("scholarly_source_record") or {}
+            search_res = params.get("search_result") or (adapter_state or {}).get("lit_search_result") or {}
+            doi_res = params.get("doi_result") or (adapter_state or {}).get("doi_verification_result") or {}
+            source_rec = params.get("source_record") or (adapter_state or {}).get("scholarly_source_record") or {}
 
             if vtype == VerificationType.RESEARCH_SEARCH_COMPLETED:
                 provider_statuses = search_res.get("provider_statuses", {})
@@ -637,6 +657,221 @@ class GoalVerifier:
                     observed_value={"provider": provider, "record_url": record_url, "retrieval_timestamp": timestamp},
                     evidence_reference="scholarly_provenance",
                     failure_reason=None if preserved else "Source provenance missing provider, canonical record URL, or retrieval timestamp",
+                )
+
+            elif vtype == VerificationType.RESEARCH_CLAIM_VERIFIED:
+                claim_detail = params.get("claim_detail") or params.get("verification_detail") or {}
+                if hasattr(claim_detail, "model_dump"):
+                    claim_detail = claim_detail.model_dump()
+                outcome = claim_detail.get("outcome") or params.get("outcome") or "UNVERIFIED_ASSUMPTION"
+                expected_outcome = expected or params.get("expected_outcome") or "SUPPORTED"
+                min_sources = params.get("min_independent_sources", 1 if expected_outcome == "SUPPORTED" else 0)
+                actual_sources = claim_detail.get("independent_sources_count", 0)
+                statement = claim_detail.get("statement") or target or ""
+
+                outcome_matched = (outcome == expected_outcome)
+                sources_matched = (actual_sources >= min_sources)
+                matched = outcome_matched and sources_matched
+                status = VerificationStatus.SUCCESS if matched else VerificationStatus.FAILED
+                
+                fail_reasons = []
+                if not outcome_matched:
+                    fail_reasons.append(f"Outcome '{outcome}' did not match expected '{expected_outcome}'")
+                if not sources_matched:
+                    fail_reasons.append(f"Independent sources {actual_sources} below required minimum {min_sources}")
+                
+                return GoalRequirementResult(
+                    requirement_id=req.requirement_id,
+                    status=status,
+                    confidence=0.95 if matched else 1.0,
+                    observed_value={"outcome": outcome, "statement": statement, "independent_sources": actual_sources},
+                    evidence_reference="claim_verification_detail",
+                    failure_reason="; ".join(fail_reasons) if not matched else None,
+                )
+
+            elif vtype == VerificationType.RESEARCH_PROVENANCE_GRAPH_VALID:
+                graph_data = params.get("graph") or {}
+                nodes = graph_data.get("nodes", {}) if isinstance(graph_data, dict) else {}
+                edges = graph_data.get("edges", []) if isinstance(graph_data, dict) else []
+                
+                source_ids = {nid for nid, nd in nodes.items() if nd.get("type") in ("scholarly_source", "source")} if isinstance(nodes, dict) else set()
+                passage_ids = {nid for nid, nd in nodes.items() if nd.get("type") in ("passage",)} if isinstance(nodes, dict) else set()
+                claim_ids = {nid for nid, nd in nodes.items() if nd.get("type") in ("claim",)} if isinstance(nodes, dict) else set()
+
+                has_sources = bool(source_ids)
+                has_passages = bool(passage_ids)
+                has_claims = bool(claim_ids)
+
+                # Verify actual link connectivity across tiers: Source -> Passage -> Claim
+                has_src_to_psg = any(
+                    (e.get("source_id") in source_ids and e.get("target_id") in passage_ids)
+                    for e in edges if isinstance(e, dict)
+                )
+                has_psg_to_clm = any(
+                    (e.get("source_id") in passage_ids and e.get("target_id") in claim_ids)
+                    for e in edges if isinstance(e, dict)
+                )
+
+                valid_graph = has_sources and has_passages and has_claims and has_src_to_psg and has_psg_to_clm
+                status = VerificationStatus.SUCCESS if valid_graph else VerificationStatus.FAILED
+                
+                fail_reasons = []
+                if not has_sources:
+                    fail_reasons.append("Missing source nodes")
+                if not has_passages:
+                    fail_reasons.append("Missing passage nodes")
+                if not has_claims:
+                    fail_reasons.append("Missing claim nodes")
+                if not has_src_to_psg:
+                    fail_reasons.append("Broken source-to-passage edge link")
+                if not has_psg_to_clm:
+                    fail_reasons.append("Broken passage-to-claim edge link")
+
+                return GoalRequirementResult(
+                    requirement_id=req.requirement_id,
+                    status=status,
+                    confidence=0.95 if valid_graph else 1.0,
+                    observed_value={
+                        "nodes_count": len(nodes),
+                        "edges_count": len(edges),
+                        "has_sources": has_sources,
+                        "has_passages": has_passages,
+                        "has_claims": has_claims,
+                        "has_src_to_psg": has_src_to_psg,
+                        "has_psg_to_clm": has_psg_to_clm,
+                    },
+                    evidence_reference="evidence_provenance_graph",
+                    failure_reason="; ".join(fail_reasons) if not valid_graph else None,
+                )
+
+            elif vtype == VerificationType.RESEARCH_SYNTHESIS_GROUNDED:
+                synth = params.get("synthesis") or params.get("synthesis_result") or {}
+                if hasattr(synth, "model_dump"):
+                    synth = synth.model_dump()
+
+                grounded_response = synth.get("grounded_response", "")
+                verified_facts = synth.get("verified_facts", [])
+                unsupported_claims = synth.get("unsupported_claims", [])
+                references = synth.get("references", [])
+                overall_confidence = synth.get("overall_confidence", "UNCERTAIN")
+
+                has_narrative = bool(grounded_response and len(grounded_response.strip()) > 30)
+                has_references = bool(references)
+                min_facts = params.get("min_facts", 1)
+                has_sufficient_facts = len(verified_facts) >= min_facts
+
+                # Asserts that unsupported claims were not erroneously categorized as verified facts
+                no_unsupported_as_facts = True
+                for f in verified_facts:
+                    status = f.get("epistemic_status") if isinstance(f, dict) else getattr(f, "epistemic_status", None)
+                    if status not in ("VERIFIED_FACT", None):
+                        no_unsupported_as_facts = False
+
+                valid_synthesis = has_narrative and has_references and has_sufficient_facts and no_unsupported_as_facts
+                status = VerificationStatus.SUCCESS if valid_synthesis else VerificationStatus.FAILED
+
+                fail_reasons = []
+                if not has_narrative:
+                    fail_reasons.append("Missing grounded response text")
+                if not has_references:
+                    fail_reasons.append("Missing bibliographic references")
+                if not has_sufficient_facts:
+                    fail_reasons.append(f"Verified facts count {len(verified_facts)} below required {min_facts}")
+                if not no_unsupported_as_facts:
+                    fail_reasons.append("Unsupported claim erroneously flagged as VERIFIED_FACT")
+
+                return GoalRequirementResult(
+                    requirement_id=req.requirement_id,
+                    status=status,
+                    confidence=0.95 if valid_synthesis else 1.0,
+                    observed_value={
+                        "has_narrative": has_narrative,
+                        "facts_count": len(verified_facts),
+                        "inferences_count": len(synth.get("derived_inferences", [])),
+                        "unsupported_count": len(unsupported_claims),
+                        "references_count": len(references),
+                        "confidence": overall_confidence,
+                    },
+                    evidence_reference="grounded_answer_synthesis",
+                    failure_reason="; ".join(fail_reasons) if not valid_synthesis else None,
+                )
+
+            elif vtype == VerificationType.RESEARCH_CITATION_MAPPING_VALID:
+                synth = params.get("synthesis") or params.get("synthesis_result") or {}
+                if hasattr(synth, "model_dump"):
+                    synth = synth.model_dump()
+
+                grounded_response = synth.get("grounded_response", "")
+                references = synth.get("references", [])
+                ref_keys = {r.get("citation_key") for r in references if isinstance(r, dict)}
+                
+                # Extract citation keys like [1], [2] from narrative
+                cited_in_text = set(re.findall(r"\[\d+\]", grounded_response))
+                
+                has_citations = bool(cited_in_text or references)
+                # Check that every cited key in text exists in references
+                unmapped_citations = cited_in_text - ref_keys
+                all_mapped = len(unmapped_citations) == 0
+
+                # Check provenance integrity: assert no fake DOIs or URLs
+                provenance_valid = True
+                for r in references:
+                    doi = r.get("doi")
+                    if doi and not doi.startswith("10."):
+                        provenance_valid = False
+                    url = r.get("canonical_url")
+                    if url and not (url.startswith("http://") or url.startswith("https://")):
+                        provenance_valid = False
+
+                valid_mapping = has_citations and all_mapped and provenance_valid
+                status = VerificationStatus.SUCCESS if valid_mapping else VerificationStatus.FAILED
+
+                fail_reasons = []
+                if not has_citations:
+                    fail_reasons.append("No citation markers present")
+                if not all_mapped:
+                    fail_reasons.append(f"Unmapped in-text citations: {unmapped_citations}")
+                if not provenance_valid:
+                    fail_reasons.append("Invalid or fabricated DOI/URL detected in references")
+
+                return GoalRequirementResult(
+                    requirement_id=req.requirement_id,
+                    status=status,
+                    confidence=0.95 if valid_mapping else 1.0,
+                    observed_value={
+                        "cited_in_text": list(cited_in_text),
+                        "references_count": len(references),
+                        "all_mapped": all_mapped,
+                        "provenance_valid": provenance_valid,
+                    },
+                    evidence_reference="citation_mapping_provenance",
+                    failure_reason="; ".join(fail_reasons) if not valid_mapping else None,
+                )
+
+            elif vtype == VerificationType.RESEARCH_CONTRADICTION_DETECTED:
+                synth = params.get("synthesis") or params.get("synthesis_result") or {}
+                if hasattr(synth, "model_dump"):
+                    synth = synth.model_dump()
+
+                contradictions = synth.get("contradictions") or params.get("contradictions") or []
+                min_contradictions = params.get("min_contradictions", 1)
+
+                has_contradictions = len(contradictions) >= min_contradictions
+                status = VerificationStatus.SUCCESS if has_contradictions else VerificationStatus.FAILED
+
+                return GoalRequirementResult(
+                    requirement_id=req.requirement_id,
+                    status=status,
+                    confidence=0.95 if has_contradictions else 1.0,
+                    observed_value={
+                        "contradictions_count": len(contradictions),
+                        "reports": [
+                            {"topic": c.get("topic_or_claim"), "conflict": c.get("nature_of_conflict")}
+                            for c in contradictions if isinstance(c, dict)
+                        ],
+                    },
+                    evidence_reference="contradiction_detection_report",
+                    failure_reason=None if has_contradictions else f"Detected {len(contradictions)} contradictions, expected >= {min_contradictions}",
                 )
 
 

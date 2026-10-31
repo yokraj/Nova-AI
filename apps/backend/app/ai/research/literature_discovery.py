@@ -505,6 +505,7 @@ class EuropePMCProvider(BaseScholarlyProvider):
         )
 
 
+
 class LiteratureDiscoveryEngine:
     """Central literature discovery and DOI verification engine for Nova-AI (Phase 10L-A)."""
 

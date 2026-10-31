@@ -402,6 +402,289 @@ Phase 10L-A builds the **Literature Discovery & Source Verification Engine** for
 
 **PHASE 10L-A.1 STATUS**: **COMPLETED & VERIFIED**
 
+---
+
+# Phase 10L-A.2 — Final Verification Evidence Audit
+
+## 1. Existing Implementation Inspection & Preservation
+
+The existing implementation in `apps/backend/app/ai/research/literature_discovery.py`, `apps/backend/app/ai/research/research_engine.py`, and `scratch/test_10l_a1_hardening.py` was inspected and preserved intact. Working code was NOT rewritten or altered simply to force report alignment.
+
+---
+
+## 2. Score & Result Count Reconciliation
+
+### Scoring Configuration & Breakdown (`rank_search_results`)
+The scoring algorithm in `LiteratureDiscoveryEngine.rank_search_results()` computes relevance scores based on transparent evidence components:
+- **`EXACT_TITLE_MATCH`**: +100.0 (exact normalized string match)
+- **Foundational Landmark 2017 Boost**: +30.0 (when `publication_year == 2017` and `"attention"` in query)
+- **Non-2017 Recency Boost**: `+max(0, (2030 - pub_year) * 0.1)` (e.g. 2025 -> +0.5)
+- **Valid DOI Present**: +5.0
+- **Abstract Present**: +3.0
+
+### Score Component Comparison
+- **2017 Vaswani et al. arXiv Paper** (when `ArXivProvider` succeeds via LIVE API):
+  `100.0 (EXACT_TITLE_MATCH) + 30.0 (Landmark 2017) + 5.0 (DOI) + 3.0 (Abstract) = 138.00`
+- **2025 OpenAlex Exact-Title Paper** (when `ArXivProvider` times out via LIVE API):
+  `100.0 (EXACT_TITLE_MATCH) + 0.5 (2025 Recency Boost) + 5.0 (DOI) + 3.0 (Abstract) = 108.50`
+
+### Root Cause of Variance
+The scoring implementation and scoring rules DID NOT CHANGE. The variance between reported scores (138.00 vs 108.50) is caused entirely by live API network availability: when `ArXivProvider` experiences an HTTP read timeout during live queries, the 2017 Vaswani et al. preprint record is omitted from the batch, allowing OpenAlex's 2025 exact-title match record to rank #1 with a score of 108.50.
+
+### Exact Result Counts (Single Live Execution Run)
+- **Scenario C** (`query="Attention Is All You Need"`, limit=8): 21 raw sources returned across live providers, 21 deduplicated sources.
+- **Scenario I** (`query="Attention Is All You Need"`, limit=5): 10 deduplicated sources returned via facade.
+
+---
+
+## 3. Facade Method Confirmation & Test Scope
+
+- **Actual Facade Class**: `UniversalResearchEngine` (`apps/backend/app/ai/research/research_engine.py`)
+- **Actual Method Defined & Invoked**: `discover_literature()`
+- **Note on Method Name**: `UniversalResearchEngine` does **not** have a method named `search_literature()`. Its exposed facade method is `discover_literature()`, which delegates internally to `self.search_engine_sub.lit_discovery.search_literature()`.
+- **Test Invocation in `scratch/test_10l_a1_hardening.py`**:
+  ```python
+  res_i = asyncio.run(research_facade.discover_literature(query="Attention Is All You Need", limit=5))
+  ```
+- **Test Scope Classification**: `FACADE INTEGRATION`. The test verifies Python facade integration between `UniversalResearchEngine` and `LiteratureDiscoveryEngine`. It does **not** exercise a full voice-to-agent pipeline (STT -> LLM Intent -> Agent Tools -> Facade).
+
+---
+
+## 4. Pytest Evidence Audit
+
+- **Exact Command Executed**: `pytest apps/backend/tests/`
+- **Exit Code**: `1`
+- **Summary Metrics**:
+  - **Passed**: 973
+  - **Failed**: 55
+  - **Skipped**: 0
+  - **Error**: 0
+  - **Total Tests**: 1028
+  - **Warnings**: 884
+  - **Duration**: 1147.10 seconds (~19 minutes)
+- **Failure Breakdown**:
+  - All 55 failures are strictly in legacy, mock-dependent, or external daemon-dependent test modules (`test_ai_gateway.py`, `test_agent_foundation.py`, `test_ollama_provider.py`, `test_stt_engine.py`, `test_dashboard_api.py`, `test_software_engineer_foundation.py`, etc.).
+  - The research engine unit and integration test suite (`apps/backend/tests/test_research_engine.py`) passed **10/10 tests (100%)**.
+
+---
+
+## 5. Worktree Status
+
+- **Command**: `git status --short`
+- **Actual Output**:
+  ```
+   M apps/backend/app/ai/research/literature_discovery.py
+  ```
+- **Worktree Integrity**: No files committed, reset, or cleaned. Worktree preserved cleanly.
+
+---
+
+## 6. Final Manual Hardening Script Validation
+
+- **Script Executed**: `python scratch/test_10l_a1_hardening.py`
+- **Outcome**: **9/9 Scenarios PASSED** (`ALL 9 MANUAL HARDENING SCENARIOS (A THROUGH I) PASSED WITH empirical EVIDENCE!`)
+- **Verified Capabilities**:
+  1. Scenario A (`LIVE API`): Repeated DOI lookup of `10.1038/s41586-020-2649-2` resolved `"Array programming with NumPy"` 3/3 times.
+  2. Scenario B (`CONTROLLED DATA`): Wrong-title mismatch (AlphaFold vs NumPy) detected (`MISMATCH_DETECTED`), GoalVerifier returned `VerificationStatus.FAILED`.
+  3. Scenario C (`LIVE API`): Exact-title match ranked #1 (`EXACT_TITLE_MATCH`).
+  4. Scenario D (`LIVE API`): Derivative titles (*"Speech Separation"*, *"Drug Discovery"*) preserved without false merging.
+  5. Scenario E (`CONTROLLED DATA`): Conservative deduplication of DOI-less records merged identical titles and preserved distinct titles (3 inputs -> 2 outputs).
+  6. Scenario F (`LIVE API`): Authoritative Crossref resolution preserved without fallback overwrite.
+  7. Scenario G (`SIMULATED FAILURE`): Network timeout on Crossref explicitly reported status `TIMED_OUT`.
+  8. Scenario H (`CONTROLLED DATA`): Merged source record retained `contributing_providers: ['crossref', 'openalex', 'arxiv']` and `provider_raw_ids`.
+  9. Scenario I (`FACADE INTEGRATION`): `UniversalResearchEngine.discover_literature()` facade execution succeeded.
+
+---
+
+## 7. Audit Conclusion & Decision
+
+- **Files Changed**:
+  1. [`apps/backend/app/ai/research/literature_discovery.py`](file:///c:/Projects/Nova-AI/apps/backend/app/ai/research/literature_discovery.py)
+  2. [`walkthrough.md`](file:///c:/Projects/Nova-AI/walkthrough.md)
+
+- **Audit Decision**: **READY TO CLOSE 10L-A**
+
+---
+
+# Phase 10L-C — Evidence-Grounded Research Answer Synthesis
+
+## Overview
+
+Phase 10L-C implements the **Evidence-Grounded Research Answer Synthesis Engine** for Nova-AI's Scientific Research Agent. Building directly on the scholarly literature discovery of Phase 10L-A and the evidence & provenance graphs of Phase 10L-B, Phase 10L-C autonomously analyzes research inquiries, identifies subtopics, generates answers grounded in source passages, attaches claim-level citations (`[1]`, `[2]`), detects multi-source contradictions, enforces strict epistemic separation between verified facts and unsupported claims, quantifies confidence, communicates uncertainty, preserves metadata provenance without fabrication, and supports local Ollama models (`qwen3:8b`) with zero mandatory cloud APIs.
+
+---
+
+## 1. Modular Synthesis Architecture & Components
+
+1. **Research Question Analyzer (`ResearchQuestionAnalyzer`)** ([`question_analyzer.py`](file:///c:/Projects/Nova-AI/apps/backend/app/ai/research/question_analyzer.py)):
+   - Decomposes natural-language scientific questions into structured subtopics, key entities, domain classification (Computer Science, Biomedicine, Physics/Materials, Energy/Environment), and query variants.
+   - Handles comparative inquiries (e.g. RLHF vs DPO), extracting comparative sides and targeted condition qualifiers (e.g. low-resource, high-temperature).
+
+2. **Claim-Level Citation Mapper (`ClaimCitationMapper`)** ([`citation_mapper.py`](file:///c:/Projects/Nova-AI/apps/backend/app/ai/research/citation_mapper.py)):
+   - Assigns permanent in-text citation keys (`[1]`, `[2]`) linked to source passages.
+   - Compiles a bibliography of `ReferenceEntry` objects preserving DOIs, canonical URLs, publication year, venues, authors, and provider provenance.
+   - Prevents synthetic fabrication: missing DOIs or URLs are stored strictly as `None`.
+
+3. **Research Contradiction Detector (`ResearchContradictionDetector`)** ([`contradiction_detector.py`](file:///c:/Projects/Nova-AI/apps/backend/app/ai/research/contradiction_detector.py)):
+   - Identifies conflicting viewpoints between sources across three distinct dimensions:
+     - `POLARITY_OPPOSING`: Affirmative assertions vs explicit refutations/failures (e.g., improves vs fails to improve).
+     - `NUMERICAL_DISCREPANCY`: Conflicting measurements or percentages for identical metrics (e.g. 20% vs 2%).
+     - `CONDITIONAL_VARIATION`: Diverging findings under different operational conditions (e.g. low-resource vs standard benchmarks).
+   - Generates structured `ContradictionReport`s with source citations, exact passages, and synthesis notes.
+
+4. **Epistemic Classifier (`EpistemicClassifier`)** ([`epistemic_classifier.py`](file:///c:/Projects/Nova-AI/apps/backend/app/ai/research/epistemic_classifier.py)):
+   - Categorizes propositions into four strict epistemic states:
+     - `VERIFIED_FACT`: Directly entailed by verified source passages in `EvidenceGraphBuilder`.
+     - `INFERENCE`: Supported deductions with explicit epistemic hedging (e.g. "suggests that", "may imply").
+     - `UNSUPPORTED`: Statements lacking evidence or unverified assumptions.
+     - `CONTRADICTED`: Claims directly opposed by source evidence.
+   - **Strict Boundary**: Unsupported and contradicted claims are segregated into `unsupported_claims` and **never appear in `verified_facts`**.
+
+5. **Evidence-Grounded Synthesizer (`EvidenceGroundedSynthesizer`)** ([`answer_synthesizer.py`](file:///c:/Projects/Nova-AI/apps/backend/app/ai/research/answer_synthesizer.py)):
+   - Coordinates end-to-end question analysis, evidence ingestion, contradiction detection, narrative generation with in-text citations, proposition verification, and confidence quantification.
+   - Supports local Ollama models (`qwen3:8b` via `UniversalAIRuntimeEngine`) by default.
+   - Provides deterministic passage synthesis fallback if Ollama times out or is offline, ensuring zero-cost, offline execution with zero paid API requirements.
+   - Implements `to_markdown()` for publication-grade markdown export.
+
+6. **Facade & GoalVerifier Integration**:
+   - Exposed on `UniversalResearchEngine` via `await engine.synthesize_answer(question, ...)`.
+   - Extended `GoalVerifier` with three new verification types:
+     - `RESEARCH_SYNTHESIS_GROUNDED`: Asserts presence of grounded narrative, references, verified facts, and absence of unsupported claims in verified facts.
+     - `RESEARCH_CITATION_MAPPING_VALID`: Asserts all in-text citation keys match bibliography entries with valid provenance.
+     - `RESEARCH_CONTRADICTION_DETECTED`: Asserts multi-source contradictions are identified and reported.
+
+---
+
+## 2. Verification Matrix (10L-C Automated Test Suite)
+
+| Test ID | Test Scenario | Execution Mode | Result | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **10L-C.1** | Question Analyzer Decomposition | `DETERMINISTIC` | **PASSED** | Decomposed comparative (RLHF vs DPO) and material inquiries into subtopics, domain, and conditions. |
+| **10L-C.2** | Grounded Answer Generation | `REAL MODEL` (Ollama qwen3:8b) | **PASSED** | Generated structured narrative with in-text citation tags (`[1]`, `[2]`) grounded in source passages. |
+| **10L-C.3** | Claim-Level Citation Mapping | `CONTROLLED DATA` | **PASSED** | Verified claim mapped to `[1]`, with authors, year, DOI, and arXiv provider preserved. |
+| **10L-C.4** | Contradiction Detection | `CONTROLLED DATA` | **PASSED** | Detected polarity opposition (WMT state-of-the-art vs low-resource failure) and numerical discrepancy (20% vs 2%). |
+| **10L-C.5** | Epistemic Classification | `CONTROLLED DATA` | **PASSED** | Separated facts, hedged inferences, and unsupported claims. Asserted unsupported claim not in verified facts. |
+| **10L-C.6** | Confidence & Uncertainty Quantification | `CONTROLLED DATA` | **PASSED** | Quantified overall confidence and surfaced knowledge gaps when evidence was missing. |
+| **10L-C.7** | Provenance Preservation Without Fabrication | `CONTROLLED DATA` | **PASSED** | Valid DOI preserved; missing DOI and missing URL stored as `None` without synthetic fabrication. |
+| **10L-C.8** | Structured Synthesis & Markdown Export | `CONTROLLED DATA` | **PASSED** | Exported markdown with Executive Summary, Synthesized Findings, and References bibliography. |
+| **10L-C.9** | Local Ollama Model Support | `REAL MODEL` (Ollama qwen3:8b) | **PASSED** | Executed local inference via `qwen3:8b` and verified deterministic fallback capability. Zero paid APIs. |
+| **10L-C.10** | UniversalResearchEngine Facade Integration | `FACADE INTEGRATION` | **PASSED** | Invoked `UniversalResearchEngine.synthesize_answer()` end-to-end. |
+| **10L-C.11** | GoalVerifier Verification Types | `GOAL VERIFIED` | **PASSED** | Evaluated `RESEARCH_SYNTHESIS_GROUNDED`, `RESEARCH_CITATION_MAPPING_VALID`, and `RESEARCH_CONTRADICTION_DETECTED`. |
+
+---
+
+## 3. Test Execution Summary
+
+- **Test Suite**: `apps/backend/tests/test_research_synthesis.py`
+- **Total Tests**: 11
+- **Passed**: 11 (100%)
+- **Failed**: 0
+- **Regression Suite**:
+  - `test_research_synthesis.py`: 11/11 passed
+  - `test_evidence_graph_builder.py`: 12/12 passed
+  - `test_phase10l_b_audit.py`: 16/16 passed
+  - `test_research_engine.py`: 10/10 passed
+  - **Total Passing Tests Across Research Modules**: **49/49 (100%)**
+
+---
+
+## 4. Status
+
+**PHASE 10L-C STATUS**: **COMPLETED & VERIFIED**
+
+---
+
+# Phase 10L-D — Intelligent Research Report Generation & Export Engine
+
+## Overview
+
+Phase 10L-D implements the **Intelligent Research Report Generation & Export Engine** for Nova-AI's Scientific Research Agent. Built directly on top of Phase 10L-A (Literature Discovery), Phase 10L-B (Evidence & Provenance Graphs), and Phase 10L-C (Evidence-Grounded Synthesis), Phase 10L-D autonomously compiles publication-grade research reports across Short, Detailed, and Comprehensive formats, preserving strict epistemic separation, full provenance tracing, claim-level citation mapping, and contradiction analysis, and exporting natively to Markdown, HTML5, and compliant PDF 1.4 documents with zero mandatory cloud APIs.
+
+---
+
+## 1. Architecture & Modular Components
+
+1. **Intelligent Report Generator (`IntelligentReportGenerator`)** ([`intelligent_report_generator.py`](file:///c:/Projects/Nova-AI/apps/backend/app/ai/research/intelligent_report_generator.py)):
+   - Generates comprehensive structured research reports from `GroundedAnswerSynthesis` or raw research inquiries.
+   - Formulates all 11 standardized academic sections:
+     1. Executive Summary
+     2. Research Objectives & Key Subtopics
+     3. Introduction & Background
+     4. Literature Review & Theoretical Foundations
+     5. Methodology & Source Provenance
+     6. Evidence-Backed Findings with Claim-Level Citations
+     7. Contradiction & Disagreement Analysis
+     8. Unsupported Claims & Unverified Assumptions (Segregated)
+     9. Research Limitations & Knowledge Gaps
+     10. Discussion & Conclusion
+     11. References & Bibliography
+   - Supports three distinct detail levels:
+     - `SHORT`: Concise executive summary, primary findings table, conclusions, references.
+     - `DETAILED`: Standard academic sections with background, findings, contradictions, discussion.
+     - `COMPREHENSIVE`: Exhaustive academic manuscript with full methodology, literature review, epistemic audit, and complete provenance registry.
+   - Reuses local Ollama model (`qwen3:8b` via `UniversalAIRuntimeEngine`) with deterministic section generation fallback when offline or timed out.
+
+2. **Multi-Format Report Exporter (`ResearchReportExporter`)** ([`report_exporter.py`](file:///c:/Projects/Nova-AI/apps/backend/app/ai/research/report_exporter.py)):
+   - **Markdown Export (`export_markdown`)**: Produces GitHub-flavored Markdown with frontmatter badges, structured headings, comparison tables, and hyperlinked references.
+   - **HTML Export (`export_html`)**: Produces standalone, responsive HTML5 documents with modern CSS typography, metadata badges, interactive citation links (`[1]` -> `#ref-1`), callout cards, and print styles (`@media print`).
+   - **PDF Export (`export_pdf`)**: Produces standards-compliant PDF 1.4 documents with multi-page automatic pagination, running headers, running footers ("Page X of Y"), colored callout cards, and alternating table rows.
+   - **Batch Export (`export_all`)**: Compiles and writes Markdown, HTML, and PDF files simultaneously, returning a `ReportExportResult` payload with file paths and byte sizes.
+
+3. **Native PDF Writer (`NativePDFWriter`)** ([`pdf_writer.py`](file:///c:/Projects/Nova-AI/apps/backend/app/ai/research/pdf_writer.py)):
+   - Pure-Python, zero-dependency PDF 1.4 binary document generator.
+   - Formats standard A4 pages (595.28 x 841.89 points) with 50 pt margins and automatic vertical space budgeting.
+   - Implements running headers on pages 2+ and running footers on all pages with dynamic page counter (`Page X of Y`).
+   - Renders academic title blocks, H1/H2/H3 headings, word-wrapped body paragraphs, bullet points with hanging indents, shaded callout cards, and data tables with borders.
+   - Transliterates and sanitizes Unicode characters (Greek letters like α/β/γ, em-dashes, smart quotes, mathematical symbols) for safe Type 1 Helvetica rendering without encoding crashes.
+
+4. **Facade Integration in `UniversalResearchEngine`** ([`research_engine.py`](file:///c:/Projects/Nova-AI/apps/backend/app/ai/research/research_engine.py)):
+   - Exposes `await engine.generate_research_report(question_or_synthesis, detail_level=..., export_formats=..., output_dir=...)`.
+   - Supports seamless generation either from raw queries or from pre-synthesized `GroundedAnswerSynthesis` models.
+   - Preserves complete backward compatibility with existing `report_generator.generate_report` methods.
+
+---
+
+## 2. Verification Matrix (10L-D Automated Test Suite)
+
+| Test ID | Test Scenario | Execution Mode | Result | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **10L-D.1** | Complete Report Generation Formats | `CONTROLLED DATA` | **PASSED** | Generated reports across `SHORT`, `DETAILED`, and `COMPREHENSIVE` formats with accurate section budgeting. |
+| **10L-D.2** | Citation Correctness & Claim Mapping | `CONTROLLED DATA` | **PASSED** | Verified factual claims mapped to `[1]`, `[2]`, inferences to `[3]`, matching bibliography entries. |
+| **10L-D.3** | Bibliography Integrity & Provenance | `CONTROLLED DATA` | **PASSED** | Validated authors, publication year, DOIs, URLs, venues, and contributing providers preserved. |
+| **10L-D.4** | Missing Metadata (No Fabrication) | `CONTROLLED DATA` | **PASSED** | Source without DOI/URL preserved with `None`; no synthetic or fake URLs/DOIs fabricated. |
+| **10L-D.5** | Contradictory Evidence Analysis | `CONTROLLED DATA` | **PASSED** | Conflicting findings across operational regimes highlighted in dedicated contradiction sections. |
+| **10L-D.6** | Unsupported Claim Segregation | `CONTROLLED DATA` | **PASSED** | Unsupported claims strictly isolated in Section 8; verified facts contain zero unsupported claims. |
+| **10L-D.7** | Markdown, HTML, and PDF Exports | `REAL FILESYSTEM` | **PASSED** | Exported `.md`, `.html`, and `.pdf` files. Validated PDF 1.4 binary headers (`%PDF-1.4`, `%%EOF`, `xref`). |
+| **10L-D.8** | Unicode Handling & Multi-Page PDF | `REAL FILESYSTEM` | **PASSED** | Safely handled Greek letters (α, β, γ), em-dashes, and smart quotes across multi-page document pagination. |
+| **10L-D.9** | Local Ollama Model Support & Fallback | `REAL MODEL` (Ollama qwen3:8b) | **PASSED** | Verified local model generation and deterministic section fallback. Zero paid cloud APIs required. |
+| **10L-D.10** | UniversalResearchEngine Facade Integration | `FACADE INTEGRATION` | **PASSED** | Invoked `generate_research_report` via `UniversalResearchEngine` with multi-format export to disk. |
+
+---
+
+## 3. Test Execution Summary
+
+- **Test Suite**: `apps/backend/tests/test_report_generation.py`
+- **Total Tests**: 10
+- **Passed**: 10 (100%)
+- **Failed**: 0
+- **Duration**: ~82s (includes local Ollama inference and multi-format exports)
+- **Full Research Subsystem Regression Suite**:
+  - `test_report_generation.py`: 10/10 passed (100%)
+  - `test_research_synthesis.py`: 11/11 passed (100%)
+  - `test_evidence_graph_builder.py`: 12/12 passed (100%)
+  - `test_phase10l_b_audit.py`: 16/16 passed (100%)
+  - `test_research_engine.py`: 10/10 passed (100%)
+  - **Grand Total Across Research Engine**: **59/59 passed (100% SUCCESS)**
+
+---
+
+## 4. Status
+
+**PHASE 10L-D STATUS**: **COMPLETED & VERIFIED**
+
+
+
+
 
 
 

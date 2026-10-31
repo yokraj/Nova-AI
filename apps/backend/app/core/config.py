@@ -4,17 +4,28 @@ Loads, validates, and stores application settings from environment variables
 using Pydantic Settings.
 """
 
+from pathlib import Path
 from typing import Any, List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.core.version import APP_NAME, VERSION
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent  # apps/backend
+ROOT_DIR = BASE_DIR.parent.parent  # C:\Projects\Nova-AI
+
+DEFAULT_DEV_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 
 class Settings(BaseSettings):
     """Application settings class supporting environment variable injection."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(str(ROOT_DIR / ".env"), str(BASE_DIR / ".env"), ".env"),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
@@ -38,9 +49,9 @@ class Settings(BaseSettings):
     DB_ECHO: bool = False
 
     # AI Gateway Settings
-    AI_DEFAULT_MODEL: str = "gpt-4o"
+    AI_DEFAULT_MODEL: str = "qwen3:8b"
     AI_MAX_RETRIES: int = 3
-    AI_TIMEOUT_SECONDS: float = 30.0
+    AI_TIMEOUT_SECONDS: float = 60.0
 
     # Future Provider API Keys
     OPENAI_API_KEY: Optional[str] = None
@@ -48,17 +59,30 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = None
 
     # CORS Origins Settings
-    BACKEND_CORS_ORIGINS: List[str] = Field(default_factory=list)
+    BACKEND_CORS_ORIGINS: Union[List[str], str] = Field(
+        default_factory=lambda: list(DEFAULT_DEV_CORS_ORIGINS)
+    )
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Any) -> List[str]:
-        """Parses a comma-separated string or a list of origins into a list."""
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",") if i.strip()]
-        elif isinstance(v, list):
-            return v
-        return []
+        """Parses a comma-separated string, JSON string, or a list of origins into a list."""
+        if isinstance(v, str):
+            v_stripped = v.strip()
+            if v_stripped.startswith("[") and v_stripped.endswith("]"):
+                import json
+                try:
+                    parsed = json.loads(v_stripped)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if str(item).strip()]
+                except Exception:
+                    pass
+            origins = [i.strip() for i in v.split(",") if i.strip()]
+            return origins if origins else list(DEFAULT_DEV_CORS_ORIGINS)
+        elif isinstance(v, (list, tuple, set)):
+            origins = [str(i).strip() for i in v if str(i).strip()]
+            return origins if origins else list(DEFAULT_DEV_CORS_ORIGINS)
+        return list(DEFAULT_DEV_CORS_ORIGINS)
 
     # SQLite Database Fallback Path
     SQLITE_DB_PATH: str = "./data/nova_ai.db"

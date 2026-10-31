@@ -7,19 +7,25 @@ import StatusBar from './StatusBar';
 
 export const AppLayout: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [rightPanelOpen, setRightPanelOpen] = useState<boolean>(false);
 
   return (
     <div className="min-h-screen max-h-screen w-full flex flex-col bg-black text-slate-100 overflow-hidden font-sans">
       {/* Top Navigation Header */}
-      <TopNavigation onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)} />
+      <TopNavigation
+        onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
+        onToggleMobileMenu={() => setMobileMenuOpen(true)}
+      />
 
       {/* Center Layout Workspace */}
       <div className="flex-1 flex min-w-0 overflow-hidden relative bg-black">
-        {/* Left Sidebar */}
+        {/* Left Sidebar (Desktop & Mobile Drawer) */}
         <Sidebar
           collapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          mobileOpen={mobileMenuOpen}
+          onCloseMobile={() => setMobileMenuOpen(false)}
         />
 
         {/* Main Workspace (Outlet Page Content) */}

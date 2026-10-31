@@ -15,6 +15,7 @@ export interface SystemTelemetry {
   networkUpMbps: number;
   temperatureC: number;
   tempStatus: 'nominal' | 'elevated' | 'critical';
+  isLive?: boolean;
 }
 
 export interface MissionItem {

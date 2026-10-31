@@ -66,6 +66,10 @@ class KnowledgeType(str, Enum):
     PERSON = "person"
     PROJECT = "project"
     API_REF = "api_ref"
+    SCHOLARLY_SOURCE = "scholarly_source"
+    PASSAGE = "passage"
+    CLAIM = "claim"
+    VERIFICATION = "verification"
 
 
 class ConfidenceLevel(str, Enum):
@@ -75,6 +79,7 @@ class ConfidenceLevel(str, Enum):
     MEDIUM = "MEDIUM"
     LOW = "LOW"
     UNVERIFIED = "UNVERIFIED"
+    UNCERTAIN = "UNCERTAIN"
 
 
 class ReportType(str, Enum):
@@ -352,4 +357,452 @@ class LiteratureSearchResult(BaseModel):
     provider_statuses: Dict[str, ScholarlyProviderStatus] = Field(default_factory=dict)
     duration_sec: float = Field(0.0)
     executed_at: float = Field(default_factory=time.time)
+
+
+class ClaimVerificationOutcome(str, Enum):
+    """Enumerate evidence verification outcomes for claims (Phase 10L-B)."""
+
+    SUPPORTED = "SUPPORTED"
+    CONTRADICTED = "CONTRADICTED"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    UNVERIFIED_ASSUMPTION = "UNVERIFIED_ASSUMPTION"
+
+
+class ClaimType(str, Enum):
+    """Enumerate atomic claim categories (Phase 10L-B)."""
+
+    DIRECT_STATEMENT = "direct_statement"
+    DERIVED_INFERENCE = "derived_inference"
+    NUMERIC_FINDING = "numeric_finding"
+    METHODOLOGICAL_CLAIM = "methodological_claim"
+
+
+class SourcePassage(BaseModel):
+    """Exact extract of source text from a paper or document (Phase 10L-B)."""
+
+    passage_id: str = Field(default_factory=lambda: f"psg_{uuid.uuid4().hex[:10]}")
+    source_id: str = Field(...)
+    text: str = Field(...)
+    section: str = Field("abstract")
+    char_offset_start: Optional[int] = Field(None)
+    char_offset_end: Optional[int] = Field(None)
+    is_untrusted_data: bool = Field(True)
+    prompt_injection_flagged: bool = Field(False)
+    extracted_at: float = Field(default_factory=time.time)
+
+
+class AtomicClaim(BaseModel):
+    """Atomic factual proposition extracted from or evaluated against source passages (Phase 10L-B)."""
+
+    claim_id: str = Field(default_factory=lambda: f"clm_{uuid.uuid4().hex[:10]}")
+    statement: str = Field(...)
+    claim_type: ClaimType = Field(ClaimType.DIRECT_STATEMENT)
+    source_passage_id: Optional[str] = Field(None)
+    original_passage_text: Optional[str] = Field(None)
+    extracted_numerical_values: List[str] = Field(default_factory=list)
+    is_derived: bool = Field(False)
+    confidence_score: float = Field(1.0)
+    created_at: float = Field(default_factory=time.time)
+
+
+class EvidenceRelation(BaseModel):
+    """Directional relationship between a claim and supporting or contradicting source evidence (Phase 10L-B)."""
+
+    relation_id: str = Field(default_factory=lambda: f"evrel_{uuid.uuid4().hex[:10]}")
+    claim_id: str = Field(...)
+    passage_id: Optional[str] = Field(None)
+    source_id: Optional[str] = Field(None)
+    outcome: ClaimVerificationOutcome = Field(ClaimVerificationOutcome.INSUFFICIENT_EVIDENCE)
+    rationale: str = Field("")
+    source_doi: Optional[str] = Field(None)
+    source_url: Optional[str] = Field(None)
+    source_title: Optional[str] = Field(None)
+    publication_year: Optional[int] = Field(None)
+    is_corroborated: bool = Field(False)
+    contributing_providers: List[str] = Field(default_factory=list)
+
+
+class ClaimVerificationDetail(BaseModel):
+    """Structured verification evaluation for a specific atomic claim (Phase 10L-B)."""
+
+    claim_id: str = Field(...)
+    statement: str = Field(...)
+    outcome: ClaimVerificationOutcome = Field(ClaimVerificationOutcome.UNVERIFIED_ASSUMPTION)
+    supporting_passages: List[Dict[str, Any]] = Field(default_factory=list)
+    contradicting_passages: List[Dict[str, Any]] = Field(default_factory=list)
+    insufficient_passages: List[Dict[str, Any]] = Field(default_factory=list)
+    independent_sources_count: int = Field(0)
+    verification_explanation: str = Field("")
+    is_orphan: bool = Field(False)
+
+
+# =============================================================================
+# Phase 10L-C: Evidence-Grounded Research Answer Synthesis Models
+# =============================================================================
+
+class ClaimEpistemicStatus(str, Enum):
+    """Epistemic status of a claim in evidence-grounded research answer synthesis (Phase 10L-C)."""
+
+    VERIFIED_FACT = "VERIFIED_FACT"        # Directly entailed by verified source passages
+    INFERENCE = "INFERENCE"                # Derived deduction or hedged finding supported by evidence
+    UNSUPPORTED = "UNSUPPORTED"            # Insufficient evidence or unverified assumption
+    CONTRADICTED = "CONTRADICTED"          # Disputed / contradicted by source evidence
+
+
+class SynthesisMode(str, Enum):
+    """Synthesis operational mode (Phase 10L-C)."""
+
+    GROUNDED_STRICT = "grounded_strict"    # Zero unsupported statements permitted as facts
+    BALANCED = "balanced"                  # Permits derived inferences with explicit hedging
+    EXPLORATORY = "exploratory"            # Permits broader research hypotheses with uncertainty flags
+
+
+class QuestionAnalysis(BaseModel):
+    """Decomposed research question intent and subtopics (Phase 10L-C)."""
+
+    question: str = Field(...)
+    core_intent: str = Field(...)
+    domain: str = Field("general_science")
+    subtopics: List[str] = Field(default_factory=list)
+    key_entities: List[str] = Field(default_factory=list)
+    search_queries: List[str] = Field(default_factory=list)
+    requires_comparison: bool = Field(False)
+    target_conditions: List[str] = Field(default_factory=list)
+
+
+class ReferenceEntry(BaseModel):
+    """Auditable citation reference entry preserving provenance (Phase 10L-C)."""
+
+    citation_number: int = Field(...)
+    citation_key: str = Field(...)  # e.g., "[1]"
+    source_id: str = Field(...)
+    title: str = Field(...)
+    authors: List[str] = Field(default_factory=list)
+    publication_year: Optional[int] = Field(None)
+    doi: Optional[str] = Field(None)
+    canonical_url: Optional[str] = Field(None)
+    venue: Optional[str] = Field(None)
+    provider: str = Field("scholarly")
+    contributing_providers: List[str] = Field(default_factory=list)
+    retrieval_timestamp: float = Field(default_factory=time.time)
+
+
+class GroundedClaim(BaseModel):
+    """Individual proposition evaluated and mapped to evidence passages (Phase 10L-C)."""
+
+    claim_id: str = Field(default_factory=lambda: f"gclm_{uuid.uuid4().hex[:10]}")
+    statement: str = Field(...)
+    epistemic_status: ClaimEpistemicStatus = Field(ClaimEpistemicStatus.UNSUPPORTED)
+    confidence: ConfidenceLevel = Field(ConfidenceLevel.UNVERIFIED)
+    confidence_score: float = Field(0.0)
+    supporting_passages: List[Dict[str, Any]] = Field(default_factory=list)
+    contradicting_passages: List[Dict[str, Any]] = Field(default_factory=list)
+    citation_keys: List[str] = Field(default_factory=list)  # e.g., ["[1]"]
+    is_hedged: bool = Field(False)
+    hedging_rationale: Optional[str] = Field(None)
+    independent_sources_count: int = Field(0)
+
+
+class ContradictionReport(BaseModel):
+    """Detailed report of conflicting evidence across research sources (Phase 10L-C)."""
+
+    contradiction_id: str = Field(default_factory=lambda: f"contra_{uuid.uuid4().hex[:8]}")
+    topic_or_claim: str = Field(...)
+    source_a_summary: str = Field(...)
+    source_a_citation: Dict[str, Any] = Field(default_factory=dict)
+    source_b_summary: str = Field(...)
+    source_b_citation: Dict[str, Any] = Field(default_factory=dict)
+    nature_of_conflict: str = Field("POLARITY_OPPOSING")  # POLARITY_OPPOSING, NUMERICAL_DISCREPANCY, CONDITIONAL_VARIATION
+    resolution_or_synthesis: str = Field("")
+
+
+class GroundedAnswerSynthesis(BaseModel):
+    """Comprehensive evidence-grounded research answer synthesis (Phase 10L-C)."""
+
+    synthesis_id: str = Field(default_factory=lambda: f"synth_{uuid.uuid4().hex[:10]}")
+    research_question: str = Field(...)
+    subtopics: List[str] = Field(default_factory=list)
+    executive_summary: str = Field("")
+    grounded_response: str = Field(...)
+    verified_facts: List[GroundedClaim] = Field(default_factory=list)
+    derived_inferences: List[GroundedClaim] = Field(default_factory=list)
+    unsupported_claims: List[GroundedClaim] = Field(default_factory=list)
+    contradictions: List[ContradictionReport] = Field(default_factory=list)
+    uncertainties_and_gaps: List[str] = Field(default_factory=list)
+    references: List[ReferenceEntry] = Field(default_factory=list)
+    overall_confidence: ConfidenceLevel = Field(ConfidenceLevel.MEDIUM)
+    overall_confidence_score: float = Field(0.0)
+    model_used: str = Field("local_deterministic")
+    is_local_model: bool = Field(True)
+    duration_sec: float = Field(0.0)
+    created_at: float = Field(default_factory=time.time)
+
+    def to_markdown(self) -> str:
+        """Renders synthesis as structured, publication-grade markdown with citations and provenance."""
+        lines = [
+            f"# Research Synthesis: {self.research_question}",
+            "",
+            f"**Overall Confidence**: {self.overall_confidence.value} ({self.overall_confidence_score * 100:.1f}%) | "
+            f"**Model**: {self.model_used} ({'Local Model' if self.is_local_model else 'Remote Model'}) | "
+            f"**Synthesis ID**: `{self.synthesis_id}`",
+            "",
+            "## Executive Summary",
+            self.executive_summary if self.executive_summary else "No executive summary available.",
+            "",
+            "## Synthesized Findings",
+            self.grounded_response,
+            "",
+        ]
+
+        if self.verified_facts:
+            lines.append("## Verified Factual Claims")
+            for f in self.verified_facts:
+                cites = " ".join(f.citation_keys) if f.citation_keys else "[Evidence]"
+                lines.append(f"- **[Fact]** {f.statement} {cites} *(Confidence: {f.confidence.value})*")
+            lines.append("")
+
+        if self.derived_inferences:
+            lines.append("## Derived Inferences & Hypotheses")
+            for inf in self.derived_inferences:
+                cites = " ".join(inf.citation_keys) if inf.citation_keys else ""
+                lines.append(f"- **[Inference]** {inf.statement} {cites} *(Hedging: {inf.hedging_rationale or 'derived extrapolation'})*")
+            lines.append("")
+
+        if self.contradictions:
+            lines.append("## Contradictions & Differing Findings")
+            for c in self.contradictions:
+                lines.append(f"### Conflict: {c.topic_or_claim} ({c.nature_of_conflict})")
+                lines.append(f"- **Perspective A**: {c.source_a_summary} ({c.source_a_citation.get('title', 'Source A')})")
+                lines.append(f"- **Perspective B**: {c.source_b_summary} ({c.source_b_citation.get('title', 'Source B')})")
+                if c.resolution_or_synthesis:
+                    lines.append(f"- **Synthesis Note**: {c.resolution_or_synthesis}")
+            lines.append("")
+
+        if self.unsupported_claims:
+            lines.append("## Unsupported Claims & Unverified Assumptions")
+            for u in self.unsupported_claims:
+                lines.append(f"- **[Unsupported]** {u.statement} *(Status: {u.epistemic_status.value})*")
+            lines.append("")
+
+        if self.uncertainties_and_gaps:
+            lines.append("## Evidence Gaps & Uncertainties")
+            for g in self.uncertainties_and_gaps:
+                lines.append(f"- {g}")
+            lines.append("")
+
+        if self.references:
+            lines.append("## References & Provenance")
+            for ref in self.references:
+                authors_str = ", ".join(ref.authors) if ref.authors else "Unknown Authors"
+                year_str = f"({ref.publication_year})" if ref.publication_year else "(n.d.)"
+                venue_str = f" *{ref.venue}*." if ref.venue else ""
+                doi_str = f" DOI: [{ref.doi}](https://doi.org/{ref.doi})" if ref.doi else ""
+                url_str = f" [URL]({ref.canonical_url})" if ref.canonical_url and not ref.doi else ""
+                lines.append(f"{ref.citation_key} {authors_str} {year_str}. **{ref.title}**.{venue_str}{doi_str}{url_str}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+
+# =============================================================================
+# Phase 10L-D: Intelligent Research Report Generation & Export Models
+# =============================================================================
+
+class ReportDetailLevel(str, Enum):
+    """Enumerate research report detail levels (Phase 10L-D)."""
+
+    SHORT = "short"                     # Concise summary, core findings table, conclusions
+    DETAILED = "detailed"               # Standard academic/technical report
+    COMPREHENSIVE = "comprehensive"     # Exhaustive report with full methodology, epistemic audit, contradictions
+
+
+class ReportExportFormat(str, Enum):
+    """Enumerate report export file formats (Phase 10L-D)."""
+
+    MARKDOWN = "markdown"
+    HTML = "html"
+    PDF = "pdf"
+    ALL = "all"
+
+
+class ReportExportResult(BaseModel):
+    """Result payload tracking exported research report files and metrics (Phase 10L-D)."""
+
+    report_id: str = Field(...)
+    formats_generated: List[str] = Field(default_factory=list)
+    file_paths: Dict[str, str] = Field(default_factory=dict)
+    file_sizes_bytes: Dict[str, int] = Field(default_factory=dict)
+    duration_sec: float = Field(0.0)
+    exported_at: float = Field(default_factory=time.time)
+
+
+class StructuredResearchReport(BaseModel):
+    """Comprehensive structured research report model for Phase 10L-D."""
+
+    report_id: str = Field(default_factory=lambda: f"rep_{uuid.uuid4().hex[:10]}")
+    title: str = Field(...)
+    research_question: str = Field(...)
+    detail_level: ReportDetailLevel = Field(ReportDetailLevel.COMPREHENSIVE)
+    executive_summary: str = Field("")
+    research_objectives: List[str] = Field(default_factory=list)
+    subtopics: List[str] = Field(default_factory=list)
+    introduction_and_background: str = Field("")
+    literature_review: str = Field("")
+    methodology_and_source_selection: str = Field("")
+    evidence_backed_findings: str = Field("")
+    verified_facts: List[GroundedClaim] = Field(default_factory=list)
+    derived_inferences: List[GroundedClaim] = Field(default_factory=list)
+    unsupported_claims: List[GroundedClaim] = Field(default_factory=list)
+    contradictions: List[ContradictionReport] = Field(default_factory=list)
+    contradiction_analysis: str = Field("")
+    limitations_and_knowledge_gaps: List[str] = Field(default_factory=list)
+    discussion_and_conclusion: str = Field("")
+    references: List[ReferenceEntry] = Field(default_factory=list)
+    overall_confidence: ConfidenceLevel = Field(ConfidenceLevel.MEDIUM)
+    overall_confidence_score: float = Field(0.0)
+    model_used: str = Field("qwen3:8b")
+    is_local_model: bool = Field(True)
+    export_files: Dict[str, str] = Field(default_factory=dict)
+    generated_at: float = Field(default_factory=time.time)
+
+    def to_markdown(self) -> str:
+        """Renders comprehensive research report as publication-grade Markdown."""
+        lines = [
+            f"# {self.title}",
+            "",
+            f"**Research Inquiry**: {self.research_question}  ",
+            f"**Detail Level**: {self.detail_level.value.upper()} | "
+            f"**Confidence**: {self.overall_confidence.value} ({self.overall_confidence_score * 100:.1f}%) | "
+            f"**Model**: {self.model_used} ({'Local Model' if self.is_local_model else 'Remote Model'}) | "
+            f"**Report ID**: `{self.report_id}`",
+            "",
+            "---",
+            "",
+            "## 1. Executive Summary",
+            "",
+            self.executive_summary if self.executive_summary else "No executive summary available.",
+            "",
+            "## 2. Research Objectives & Key Subtopics",
+            "",
+        ]
+
+        if self.research_objectives:
+            lines.append("### Research Objectives:")
+            for obj in self.research_objectives:
+                lines.append(f"- {obj}")
+            lines.append("")
+
+        if self.subtopics:
+            lines.append("### Investigated Subtopics:")
+            for st in self.subtopics:
+                lines.append(f"- {st}")
+            lines.append("")
+
+        if self.introduction_and_background:
+            lines.extend([
+                "## 3. Introduction & Background",
+                "",
+                self.introduction_and_background,
+                "",
+            ])
+
+        if self.literature_review:
+            lines.extend([
+                "## 4. Literature Review",
+                "",
+                self.literature_review,
+                "",
+            ])
+
+        if self.methodology_and_source_selection:
+            lines.extend([
+                "## 5. Methodology & Source Provenance",
+                "",
+                self.methodology_and_source_selection,
+                "",
+            ])
+
+        lines.extend([
+            "## 6. Evidence-Backed Findings",
+            "",
+            self.evidence_backed_findings if self.evidence_backed_findings else "No empirical findings recorded.",
+            "",
+        ])
+
+        if self.verified_facts:
+            lines.append("### Verified Factual Claims (High Grounding)")
+            lines.append("| Statement | Confidence | Citations | Independent Sources |")
+            lines.append("| :--- | :--- | :--- | :---: |")
+            for f in self.verified_facts:
+                cites = " ".join(f.citation_keys) if f.citation_keys else "[N/A]"
+                lines.append(f"| {f.statement} | {f.confidence.value} | {cites} | {f.independent_sources_count} |")
+            lines.append("")
+
+        if self.derived_inferences:
+            lines.append("### Derived Inferences & Hypotheses")
+            for inf in self.derived_inferences:
+                cites = " ".join(inf.citation_keys) if inf.citation_keys else ""
+                lines.append(f"- **[Inference]** {inf.statement} {cites} *(Hedging: {inf.hedging_rationale or 'extrapolated'})*")
+            lines.append("")
+
+        if self.contradictions or self.contradiction_analysis:
+            lines.extend([
+                "## 7. Contradiction & Disagreement Analysis",
+                "",
+                self.contradiction_analysis if self.contradiction_analysis else "Identified cross-source contradictions:",
+                "",
+            ])
+            for c in self.contradictions:
+                lines.append(f"### Conflict: {c.topic_or_claim} ({c.nature_of_conflict})")
+                lines.append(f"- **Source A**: {c.source_a_summary} *({c.source_a_citation.get('title', 'Source A')})*")
+                lines.append(f"- **Source B**: {c.source_b_summary} *({c.source_b_citation.get('title', 'Source B')})*")
+                if c.resolution_or_synthesis:
+                    lines.append(f"- **Synthesis Note**: {c.resolution_or_synthesis}")
+                lines.append("")
+
+        if self.unsupported_claims:
+            lines.extend([
+                "## 8. Unsupported Claims & Unverified Assumptions",
+                "",
+                "> **Note**: The following statements lacked passage evidence in the retrieved corpus and are strictly segregated from verified facts:",
+                "",
+            ])
+            for u in self.unsupported_claims:
+                lines.append(f"- **[Unsupported]** {u.statement} *(Status: {u.epistemic_status.value})*")
+            lines.append("")
+
+        if self.limitations_and_knowledge_gaps:
+            lines.extend([
+                "## 9. Research Limitations & Knowledge Gaps",
+                "",
+            ])
+            for gap in self.limitations_and_knowledge_gaps:
+                lines.append(f"- {gap}")
+            lines.append("")
+
+        if self.discussion_and_conclusion:
+            lines.extend([
+                "## 10. Discussion & Conclusion",
+                "",
+                self.discussion_and_conclusion,
+                "",
+            ])
+
+        if self.references:
+            lines.extend([
+                "## 11. References & Bibliography",
+                "",
+            ])
+            for ref in self.references:
+                authors_str = ", ".join(ref.authors) if ref.authors else "Unknown Authors"
+                year_str = f"({ref.publication_year})" if ref.publication_year else "(n.d.)"
+                venue_str = f" *{ref.venue}*." if ref.venue else ""
+                doi_str = f" DOI: [{ref.doi}](https://doi.org/{ref.doi})" if ref.doi else ""
+                url_str = f" [URL]({ref.canonical_url})" if ref.canonical_url and not ref.doi else ""
+                prov_str = f" [Providers: {', '.join(ref.contributing_providers)}]" if ref.contributing_providers else ""
+                lines.append(f"{ref.citation_key} {authors_str} {year_str}. **{ref.title}**.{venue_str}{doi_str}{url_str}{prov_str}")
+            lines.append("")
+
+        return "\n".join(lines)
+
 

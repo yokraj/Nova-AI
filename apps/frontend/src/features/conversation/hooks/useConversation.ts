@@ -1,12 +1,20 @@
+import { useRef } from 'react';
 import { useConversationState } from './useConversationState';
 import { ConversationMessage, AttachmentFile } from '../types/message';
-import { simulateStreamingResponse } from '../mock/mockConversationEngine';
+import { executeRealStreamingResponse } from '../services/realConversationEngine';
 
 export function useConversation() {
   const convState = useConversationState();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleSendMessage = (prompt: string, attachments?: AttachmentFile[]) => {
     if (!prompt.trim() || !convState.activeConversationId) return;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     const userMsg: ConversationMessage = {
       id: `msg_user_${Date.now()}`,
@@ -47,41 +55,52 @@ export function useConversation() {
     convState.setIsStreaming(true);
     convState.setCurrentThinkingStage('UNDERSTANDING');
 
-    // Run simulated streaming
-    simulateStreamingResponse(prompt, (update) => {
-      convState.setCurrentThinkingStage(update.thinkingStage || null);
+    // Run real streaming response from backend / Ollama
+    executeRealStreamingResponse(
+      prompt,
+      (update) => {
+        convState.setCurrentThinkingStage(update.thinkingStage || null);
 
-      convState.setConversations((prev) =>
-        prev.map((c) => {
-          if (c.id === convState.activeConversationId) {
-            return {
-              ...c,
-              messages: c.messages.map((m) => {
-                if (m.id === assistantMsgId) {
-                  return {
-                    ...m,
-                    status: update.isComplete ? 'complete' : 'streaming',
-                    thinkingStage: update.thinkingStage,
-                    blocks: update.blocks || m.blocks,
-                    content: update.blocks && update.blocks[0]?.content ? update.blocks[0].content : m.content,
-                  };
-                }
-                return m;
-              }),
-            };
-          }
-          return c;
-        })
-      );
+        convState.setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id === convState.activeConversationId) {
+              return {
+                ...c,
+                messages: c.messages.map((m) => {
+                  if (m.id === assistantMsgId) {
+                    return {
+                      ...m,
+                      status: update.isComplete ? 'complete' : 'streaming',
+                      thinkingStage: update.thinkingStage,
+                      blocks: update.blocks || m.blocks,
+                      content:
+                        update.blocks && update.blocks[0]?.content
+                          ? update.blocks[0].content
+                          : update.streamingContent || m.content,
+                    };
+                  }
+                  return m;
+                }),
+              };
+            }
+            return c;
+          })
+        );
 
-      if (update.isComplete) {
-        convState.setIsStreaming(false);
-        convState.setCurrentThinkingStage(null);
-      }
-    });
+        if (update.isComplete) {
+          convState.setIsStreaming(false);
+          convState.setCurrentThinkingStage(null);
+        }
+      },
+      abortController.signal
+    );
   };
 
   const handleStopStreaming = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     convState.setIsStreaming(false);
     convState.setCurrentThinkingStage(null);
   };
