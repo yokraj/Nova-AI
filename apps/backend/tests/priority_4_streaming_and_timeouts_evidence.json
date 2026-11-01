@@ -1,0 +1,49 @@
+{
+  "non_streaming": {
+    "status": "PASS",
+    "duration_seconds": 8.71,
+    "model": "qwen3:8b",
+    "provider": "ollama",
+    "has_tokens_metadata": true,
+    "response": "<think>Okay, the user is asking for the capital of Japan, and they want the answer in one word. Let me think. I know that Japan is a country in East A"
+  },
+  "streaming": {
+    "status": "PASS",
+    "ttft_seconds": 0.753,
+    "total_chunks": 151,
+    "duration_seconds": 12.19,
+    "stream_assembled_preview": " <think> Okay ,  the  user  wants  me  to  count  from   1  to   5 ,  one  number  per  line .  Let  me  make  sure  I  understand  the  request  corr"
+  },
+  "multi_turn_streaming": {
+    "status": "PASS",
+    "duration_seconds": 11.11,
+    "total_chunks": 151,
+    "recalled_context": true,
+    "response": " <think> Okay ,  the  user  asked ,  \" What  fruit  did  I  say  I  like ?\"  Let  me  check  the  conversation  history . In  the  first  message ,  t"
+  },
+  "stream_cancellation": {
+    "status": "PASS",
+    "aborted_at_chunk": 4,
+    "duration_seconds": 0.85
+  },
+  "timeout_enforcement": {
+    "status": "PASS",
+    "enforced_in_seconds": 0.074,
+    "exception_type": "httpx.TimeoutException"
+  },
+  "frontend_compatibility": {
+    "status": "PASS",
+    "checked_fields": [
+      "request_id",
+      "content",
+      "model",
+      "provider",
+      "task_category",
+      "prompt_tokens",
+      "completion_tokens",
+      "total_tokens",
+      "latency_ms"
+    ],
+    "all_present": true
+  }
+}

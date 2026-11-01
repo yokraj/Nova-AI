@@ -1,0 +1,128 @@
+[
+  {
+    "test_id": "INTERACTION-1-MARKDOWN",
+    "title": "Real Markdown Grounded Inspection (README.md)",
+    "prompt": "Summarize the key architecture and technologies outlined in README.md",
+    "status_code": 200,
+    "elapsed_seconds": 78.215,
+    "model": "qwen3:8b",
+    "provider": "ollama",
+    "task_category": "File operations",
+    "verification": {
+      "valid": true,
+      "math_check": {
+        "is_math": false,
+        "valid": true
+      },
+      "code_check": {
+        "has_code": false,
+        "valid": true,
+        "blocks_count": 0,
+        "errors": []
+      },
+      "confidence": 1.0
+    },
+    "passed": true,
+    "missing_tokens": [],
+    "response_content": "<think>Okay, let's tackle this query. The user wants a summary of the key architecture and technologies from the provided README.md.\n\nFirst, I'll start by recalling the content of the README. The project is called Nova AI, an enterprise-grade operating layer. The architecture is modular with separation into presentation, business services, and infrastructure adapters. There's a Mermaid diagram showing the components: Client apps connect to a Gateway, which routes to Planner, Memory, RAG, and Tools. The Tools use OS APIs and Playwright for automation.\n\nNow, the key technologies mentioned. The backend uses FastAPI for the API service. They have a monorepo structure with Node.js and Python, using pnpm for the Node packages and pip for Python. Docker and Compose are required for databases. The development tools include Black and Ruff for code style and linting. The project also uses PostgreSQL, Redis, Qdrant, and Playwright.\n\nI need to structure the summary into architecture and technologies. For architecture, mention the modular design, the components from the diagram, and the subsystems like FastAPI, AI Task Planner, Memory & RAG, and Automation Engine. For technologies, list the programming languages (Python, TypeScript), frameworks (FastAPI, Electron, Playwright), tools (pnpm, Docker, Black, Ruff), and databases (PostgreSQL, Redis, Qdrant). Also note the development workflow requirements like code style and linters.\n\nMake sure to cite the relevant sections from the README. For example, the Mermaid diagram is in section 1, the technologies in sections 2 and 3, and the development tools in section 5. Avoid any hallucination, stick strictly to the document. Keep it concise but cover all main points.\n</think>\n\nHere's a summary of the key architecture and technologies outlined in the **README.md**:\n\n---\n\n### **Key Architecture**\n1. **Modular Design**  \n   - Separated into **presentation layer interfaces**, **business services**, and **infrastructural adapters**.  \n   - Core components include:  \n     - **Client Apps** (Desktop, Browser Extensions) \u2192 **Gateway** (FastAPI WebSocket/REST)  \n     - **Planner** (AI Task Planner) \u2192 Coordinates task decomposition and safety policies.  \n     - **Memory System** and **RAG Engine** (Retrieval-Augmented Generation) for context management.  \n     - **Automation Engine** (via Playwright) for OS-level interactions and browser automation.  \n\n2. **System Diagram**  \n   ```mermaid\n   graph TD\n       Client[Client Apps] --> Gateway[Model Gateway]\n       Gateway --> Planner[AI Task Planner]\n       Planner --> Memory[Memory System]\n       Planner --> RAG[RAG Engine]\n       Planner --> Tools[Automation Engine]\n       Tools --> OS[OS APIs & Playwright]\n   ```  \n   *(Section 1, lines 12\u201325)*\n\n---\n\n### **Core Technologies**\n1. **Backend Stack**  \n   - **Python/FastAPI**: Core API service with WebSocket/REST endpoints.  \n   - **Database**: PostgreSQL (via Docker), Redis, and Qdrant for vector search.  \n   - **Virtual Environment**: Python v3.12+ with `pip install -e .` for dependency management.  \n\n2. **Frontend & Tools**  \n   - **Node.js (v22.0.0+)** and **pnpm** for monorepo management (Electron desktop, browser extensions).  \n   - **Playwright** for browser automation and OS-level interactions.  \n\n3. **Development Tools**  \n   - **Code Style**: Enforced by **Black** (formatting) and **Ruff** (linting).  \n   - **Type Hints & Docstrings**: Google-style documentation required for all functions.  \n   - **Testing**: Pre-submission syntax checks via `python -m py_compile`.  \n\n4. **Infrastructure**  \n   - **Docker/Compose**: Required for local Postgres, Redis, and Qdrant clusters.  \n\n---\n\n### **Key Requirements**  \n- **Environment**: Python v3.12+, Node.js v22.0.0+, pnpm v11.0.0+.  \n- **Dependencies**:  \n  - Backend: FastAPI, Pydantic, PostgreSQL, Redis, Qdrant.  \n  - Frontend: Electron, Chrome/Edge extensions, Playwright.  \n\n*(Sections 1\u20135, lines 1\u2013117)*  \n\n---  \nThis summary adheres strictly to the content of the provided **README.md**."
+  },
+  {
+    "test_id": "INTERACTION-2-PYTHON-AST",
+    "title": "Real Python AST Grounded Inspection (app/main.py)",
+    "prompt": "What endpoints and functions are defined in apps/backend/app/main.py?",
+    "status_code": 200,
+    "elapsed_seconds": 81.134,
+    "model": "qwen3:8b",
+    "provider": "ollama",
+    "task_category": "File operations",
+    "verification": {
+      "valid": true,
+      "math_check": {
+        "is_math": false,
+        "valid": true
+      },
+      "code_check": {
+        "has_code": false,
+        "valid": true,
+        "blocks_count": 0,
+        "errors": []
+      },
+      "confidence": 1.0
+    },
+    "passed": true,
+    "missing_tokens": [],
+    "response_content": "<think>Okay, let's see. The user is asking about the endpoints and functions defined in the main.py file located at apps/backend/app/main.py. I need to base my answer strictly on the provided document.\n\nFirst, I'll recall the information from the document. The main.py file is the entry point for the Nova AI FastAPI backend. It mentions that it initializes the application, sets up logging, registers middlewares, routes, exception handlers, and handles lifecycle events.\n\nLooking at the extracted tabular data, there are several functions listed. The functions are lifespan, security_exception_handler, conversation_exception_handler, dashboard_exception_handler, and root. Each has their line numbers and details. The document also mentions that these functions are async. \n\nNow, the user is asking about endpoints and functions. The functions listed here are mostly exception handlers and the root function. The root function is likely the main entry point, which might handle the root URL. The exception handlers are for different routes, but the document doesn't specify the exact endpoints they are attached to. However, the security_exception_handler, conversation_exception_handler, and dashboard_exception_handler might be associated with specific routes related to security, conversations, and dashboards, respectively. \n\nWait, the document's extracted content mentions that the functions are async and their line numbers. The root function is defined on line 212. The other functions are handlers for exceptions. The main.py also imports the router from app.api.router.router, which probably defines the actual endpoints. But the question is about what's in main.py, not the router file. \n\nSo, in main.py, the endpoints might be those registered via the router, but the functions listed here are the exception handlers and the root. The root function might be the main endpoint, like /, and the other handlers are for specific paths. However, without seeing the router code, I can't list the exact endpoints. The user might be expecting the functions defined in main.py, which include the exception handlers and the root. \n\nThe answer should mention the functions present in main.py, which are the exception handlers and the root. The endpoints would be the routes registered in the router, but since the user is asking about main.py, maybe they want the functions defined there. The root function is an endpoint, and the others are handlers for exceptions that might be triggered by specific endpoints. \n\nSo, the answer should list the functions in main.py: lifespan (for lifecycle), security_exception_handler, conversation_exception_handler, dashboard_exception_handler, and root. The endpoints would be those handled by the router, but the functions in main.py are the exception handlers and the root. The user might need clarification, but based on the document, the functions are as listed.\n</think>\n\nThe `apps/backend/app/main.py` file defines the following **functions** and **endpoints** based on the provided document:\n\n---\n\n### **Functions Defined in `main.py`**\n1. **`async lifespan(app)`** (Line 32)  \n   - Purpose: Manages application lifecycle events (startup/shutdown).  \n   - Args: `app` (FastAPI application instance).  \n\n2. **`async security_exception_handler(request, exc)`** (Line 102)  \n   - Purpose: Handles exceptions for security-related endpoints.  \n\n3. **`async conversation_exception_handler(request, exc)`** (Line 140)  \n   - Purpose: Handles exceptions for conversation-related endpoints.  \n\n4. **`async dashboard_exception_handler(request, exc)`** (Line 168)  \n   - Purpose: Handles exceptions for dashboard-related endpoints.  \n\n5. **`async root()`** (Line 212)  \n   - Purpose: Root endpoint handler (likely for `/` route).  \n\n---\n\n### **Endpoints Registered (Inferred from Context)**\nWhile the document does not explicitly list all endpoints, the following are **implied** based on the structure and imports:\n- **Root endpoint**: `/` (handled by `root()` function).  \n- **Security-related endpoints**: Likely paths like `/security/*` (handled by `security_exception_handler`).  \n- **Conversation-related endpoints**: Likely paths like `/conversations/*` (handled by `conversation_exception_handler`).  \n- **Dashboard-related endpoints**: Likely paths like `/dashboard/*` (handled by `dashboard_exception_handler`).  \n\nThese endpoints are registered via the imported router (`app.api.router.router`), which is not fully detailed in the document.  \n\n---\n\n### **Key Notes**\n- The file uses **FastAPI** and **structured logging** (`structlog`).  \n- Exception handlers are mapped to specific routes (security, conversation, dashboard).  \n- The `lifespan` function manages application startup/shutdown.  \n\nFor precise endpoint paths, the router implementation (`app.api.router.router`) would need to be inspected."
+  },
+  {
+    "test_id": "INTERACTION-3-CSV-METRICS",
+    "title": "Real CSV Grounded Inspection (sample_metrics.csv)",
+    "prompt": "What services, CPU percentages, and memory values are recorded in apps/backend/tests/fixtures/sample_metrics.csv?",
+    "status_code": 200,
+    "elapsed_seconds": 45.804,
+    "model": "qwen3:8b",
+    "provider": "ollama",
+    "task_category": "File operations",
+    "verification": {
+      "valid": true,
+      "math_check": {
+        "is_math": false,
+        "valid": true
+      },
+      "code_check": {
+        "has_code": false,
+        "valid": true,
+        "blocks_count": 0,
+        "errors": []
+      },
+      "confidence": 1.0
+    },
+    "passed": true,
+    "missing_tokens": [],
+    "response_content": "<think>Okay, let's see. The user is asking about the services, CPU percentages, and memory values from the sample_metrics.csv file.\n\nFirst, I need to recall the data from the document provided. The CSV has four rows with the columns: timestamp, service_name, cpu_percent, memory_mb, and status. \n\nLooking at the extracted tabular data, the services listed are inference_gateway, vector_memory, native_bridge, and voice_assistant. The CPU percentages are 14.2, 8.5, 3.1, and 18.7. The memory_mb values are 1024, 512, 256, and 2048. \n\nI should make sure to pair each service with its corresponding CPU and memory values. The user might be interested in how each service is performing in terms of resource usage. Also, the status column has entries like healthy and active, but the user didn't ask about that, so I can ignore it. \n\nI need to present the information clearly, listing each service along with their respective CPU and memory values. The answer should be concise, directly answering the user's question without extra details. \n\nLet me double-check the data to ensure accuracy. The first row is inference_gateway with 14.2% CPU and 1024 MB memory. The second is vector_memory with 8.5% and 512 MB. Third, native_bridge at 3.1% and 256 MB. Last, voice_assistant with 18.7% and 2048 MB. \n\nYes, that's correct. So the final answer should list each service with their respective metrics.\n</think>\n\nThe **apps/backend/tests/fixtures/sample_metrics.csv** file records the following services, their CPU percentages, and memory values:\n\n1. **inference_gateway**  \n   - CPU: 14.2%  \n   - Memory: 1024 MB  \n\n2. **vector_memory**  \n   - CPU: 8.5%  \n   - Memory: 512 MB  \n\n3. **native_bridge**  \n   - CPU: 3.1%  \n   - Memory: 256 MB  \n\n4. **voice_assistant**  \n   - CPU: 18.7%  \n   - Memory: 2048 MB  \n\nThese metrics are sourced from the `sample_metrics.csv` dataset (lines 1\u20134, columns `service_name`, `cpu_percent`, and `memory_mb`). The `timestamp` and `status` columns are not requested here.  \n\n**Source**: `sample_metrics.csv` (lines 1\u20134, columns `service_name`, `cpu_percent`, `memory_mb`)."
+  },
+  {
+    "test_id": "INTERACTION-4-PDF-SPEC",
+    "title": "Real PDF Grounded Inspection (sample_document.pdf)",
+    "prompt": "Based on apps/backend/tests/fixtures/sample_document.pdf, what port and latency are specified for the Inference Engine?",
+    "status_code": 200,
+    "elapsed_seconds": 30.039,
+    "model": "qwen3:8b",
+    "provider": "ollama",
+    "task_category": "File operations",
+    "verification": {
+      "valid": true,
+      "math_check": {
+        "is_math": false,
+        "valid": true
+      },
+      "code_check": {
+        "has_code": false,
+        "valid": true,
+        "blocks_count": 0,
+        "errors": []
+      },
+      "confidence": 1.0
+    },
+    "passed": true,
+    "missing_tokens": [],
+    "response_content": "<think>Okay, let's tackle this query. The user is asking about the port and latency specified for the Inference Engine in the sample_document.pdf.\n\nFirst, I need to recall the content of the document. The document lists different components with their respective protocols, ports, and latencies. The Inference Engine is one of them. \n\nLooking back at the extracted content, the Inference Engine section mentions \"Port: 8000\" and \"Latency: <800ms\". The user is asking for both the port number and the latency. \n\nI should make sure that I'm not confusing the ports between the components. The Native Bridge is on port 3001, and the Ollama Daemon is on 11434, but those aren't relevant here. The key is to confirm that the Inference Engine's port is indeed 8000 and the latency is less than 800ms. \n\nThe answer needs to cite the specific lines from the document. The user provided the lines as part of the extracted content, so I should reference the line where the Inference Engine is listed. The line mentions \"Inference Engine HTTP / SSE 8000 <800ms\". \n\nTherefore, the port is 8000 and the latency is under 800ms. I should present this information clearly, citing the source line from the document.\n</think>\n\nThe **Inference Engine** in the document specifies:\n- **Port**: 8000\n- **Latency**: <800ms\n\nThis information is explicitly stated in the document's component table under the \"Inference Engine\" entry.  \n**Source**: `apps\\backend\\tests\\fixtures\\sample_document.pdf` (line with \"Inference Engine HTTP / SSE 8000 <800ms\")."
+  },
+  {
+    "test_id": "INTERACTION-5-SECURITY-REJECTION",
+    "title": "Workspace Security Sandboxing Path Traversal Refusal",
+    "prompt": "Examine and read C:/Windows/win.ini please",
+    "status_code": 200,
+    "elapsed_seconds": 0.02,
+    "model": "workspace_security_guard",
+    "provider": "local_engine",
+    "task_category": "File operations",
+    "verification": {
+      "valid": false,
+      "method": "workspace_security_guard",
+      "reason": "access_denied"
+    },
+    "passed": true,
+    "missing_tokens": [],
+    "response_content": "Security Error: Access Denied. Path 'C:/Windows/win.ini' is outside the authorized workspace boundary 'C:\\Projects\\Nova-AI'."
+  }
+]

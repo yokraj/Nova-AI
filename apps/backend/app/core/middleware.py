@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 import structlog
 
 from app.core.config import settings
@@ -24,7 +24,7 @@ class RequestTracingMiddleware(BaseHTTPMiddleware):
     """Middleware for injecting Request-ID and Correlation-ID trace headers."""
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Coroutine[Any, Any, Response]]
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         correlation_id = request.headers.get("X-Correlation-ID", request_id)
@@ -77,7 +77,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Enforces standard HTTP security protection headers on all responses."""
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Coroutine[Any, Any, Response]]
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         response = await call_next(request)
         response.headers["X-Frame-Options"] = "DENY"

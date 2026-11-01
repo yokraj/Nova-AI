@@ -1,10 +1,12 @@
-"""Provider Router Module.
+"""Provider Router Module for Nova AI Enterprise Core Intelligence.
 
-Routes HTTP inference calls to target provider backends (Ollama, vLLM, OpenAI, Anthropic).
+Routes HTTP inference calls to target provider backends (Ollama, OpenAI, Anthropic)
+with real multi-turn chat support, Qwen3 thinking token capture, bounded timeouts,
+and zero mock fallbacks.
 """
 
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 import httpx
 import structlog
 
@@ -15,7 +17,7 @@ logger = structlog.get_logger(__name__)
 
 
 class ProviderRouter:
-    """Enterprise Provider Route Dispatcher."""
+    """Enterprise Provider Route Dispatcher with Multi-Turn & Thinking Support."""
 
     def __init__(
         self,
@@ -26,40 +28,117 @@ class ProviderRouter:
         self.provider_manager = provider_manager or ProviderManager(config=self.config)
         logger.info("provider_router_initialized")
 
+    async def is_ollama_available(self) -> bool:
+        """Verifies if local Ollama daemon is reachable and responding."""
+        try:
+            url = f"{self.config.ollama_base_url.rstrip('/')}/api/tags"
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                res = await client.get(url)
+                return res.status_code == 200
+        except Exception:
+            return False
+
     async def dispatch_request(
-        self, provider: str, model: str, prompt: str, system_prompt: Optional[str] = None
+        self,
+        provider: str,
+        model: str,
+        prompt: str,
+        messages: Optional[List[Dict[str, str]]] = None,
+        system_prompt: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Dispatches completion call to target provider backend (Real Local/Cloud execution)."""
         target_provider = (provider or self.config.default_provider).lower()
         target_model = model or self.config.default_model
-        logger.info("request_dispatched", provider=target_provider, model=target_model)
+        logger.info("request_dispatched", provider=target_provider, model=target_model, has_history=bool(messages))
 
         if target_provider in ("ollama", "local"):
-            ollama_url = f"{self.config.ollama_base_url.rstrip('/')}/api/generate"
-            payload = {
-                "model": target_model,
-                "prompt": prompt,
-                "stream": True,
-            }
-            if system_prompt:
-                payload["system"] = system_prompt
+            # Check availability before long dispatch
+            is_online = await self.is_ollama_available()
+            if not is_online:
+                raise RuntimeError(
+                    f"Local AI inference engine (Ollama on {self.config.ollama_base_url}) is offline or unreachable. "
+                    f"Please ensure Ollama is running and model '{target_model}' is pulled."
+                )
+
+            options: Dict[str, Any] = {}
+            if max_tokens:
+                options["num_predict"] = max_tokens
+            if temperature is not None:
+                options["temperature"] = temperature
+
+            # Decide whether to use /api/chat (for multi-turn) or /api/generate
+            if messages and len(messages) > 0:
+                endpoint = f"{self.config.ollama_base_url.rstrip('/')}/api/chat"
+                chat_messages = []
+                if system_prompt:
+                    chat_messages.append({"role": "system", "content": system_prompt})
+                chat_messages.extend(messages)
+                # Ensure the current prompt is included as the latest user turn if not already
+                if not chat_messages or chat_messages[-1].get("content") != prompt:
+                    chat_messages.append({"role": "user", "content": prompt})
+
+                payload = {
+                    "model": target_model,
+                    "messages": chat_messages,
+                    "stream": True,
+                }
+                if options:
+                    payload["options"] = options
+                is_chat_api = True
+            else:
+                endpoint = f"{self.config.ollama_base_url.rstrip('/')}/api/generate"
+                payload = {
+                    "model": target_model,
+                    "prompt": prompt,
+                    "stream": True,
+                }
+                if system_prompt:
+                    payload["system"] = system_prompt
+                if options:
+                    payload["options"] = options
+                is_chat_api = False
 
             full_chunks = []
             prompt_tokens = 0
             completion_tokens = 0
+            is_thinking = False
 
             try:
-                timeout = httpx.Timeout(connect=15.0, read=90.0, write=15.0, pool=15.0)
+                timeout = httpx.Timeout(connect=15.0, read=120.0, write=15.0, pool=15.0)
                 async with httpx.AsyncClient(timeout=timeout) as client:
-                    async with client.stream("POST", ollama_url, json=payload) as response:
+                    async with client.stream("POST", endpoint, json=payload) as response:
                         response.raise_for_status()
                         async for line in response.aiter_lines():
                             if not line or not line.strip():
                                 continue
                             try:
                                 chunk = json.loads(line)
-                                full_chunks.append(chunk.get("response", ""))
+                                if is_chat_api:
+                                    msg = chunk.get("message", {})
+                                    thinking_chunk = msg.get("thinking", "")
+                                    response_chunk = msg.get("content", "")
+                                else:
+                                    thinking_chunk = chunk.get("thinking", "")
+                                    response_chunk = chunk.get("response", "")
+
+                                if thinking_chunk:
+                                    if not is_thinking:
+                                        full_chunks.append("<think>")
+                                        is_thinking = True
+                                    full_chunks.append(thinking_chunk)
+
+                                if response_chunk:
+                                    if is_thinking:
+                                        full_chunks.append("</think>\n\n")
+                                        is_thinking = False
+                                    full_chunks.append(response_chunk)
+
                                 if chunk.get("done"):
+                                    if is_thinking:
+                                        full_chunks.append("</think>\n\n")
+                                        is_thinking = False
                                     prompt_tokens = chunk.get("prompt_eval_count", 0)
                                     completion_tokens = chunk.get("eval_count", 0)
                                     break
@@ -68,7 +147,7 @@ class ProviderRouter:
 
                 content = "".join(full_chunks).strip()
                 if not content:
-                    content = f"Nova AI Response: Generated empty response from {target_model}."
+                    raise RuntimeError(f"Ollama returned an empty generation response for model '{target_model}'.")
 
                 if not prompt_tokens:
                     prompt_tokens = int(len(prompt.split()) * 1.3)
@@ -86,16 +165,7 @@ class ProviderRouter:
                 logger.error("ollama_dispatch_failed", error=str(exc))
                 raise
 
-        # Fallback for cloud providers if configured
-        content = (
-            f"Nova AI Response via [{target_provider.upper()} / {target_model}]: "
-            f"Processed query '{prompt[:50]}...' cleanly."
+        raise NotImplementedError(
+            f"Provider '{target_provider}' is not currently configured for live inference. "
+            f"Please select 'ollama' or install target cloud provider API credentials."
         )
-
-        return {
-            "content": content,
-            "provider": target_provider,
-            "model": target_model,
-            "prompt_tokens": int(len(prompt.split()) * 1.3),
-            "completion_tokens": int(len(content.split()) * 1.3),
-        }

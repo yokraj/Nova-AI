@@ -19,7 +19,7 @@ function parseBlocksFromText(rawText: string): ResponseBlock[] {
     const answerText = displayContent.substring(thinkEnd).trim();
     displayContent = answerText || thinkingText;
   } else if (displayContent.startsWith('<think>')) {
-    displayContent = displayContent.replace('<think>', 'Thinking: ').trim();
+    displayContent = displayContent.replace('<think>', 'Thinking:\n').trim();
   }
 
   // Parse code blocks if present
@@ -68,7 +68,9 @@ function parseBlocksFromText(rawText: string): ResponseBlock[] {
 export async function executeRealStreamingResponse(
   prompt: string,
   onUpdate: (payload: StreamUpdatePayload) => void,
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  history?: Array<{ role: string; content: string }>,
+  conversationId?: string
 ): Promise<void> {
   // Stage 1: Understanding & Reasoning
   onUpdate({
@@ -97,6 +99,8 @@ export async function executeRealStreamingResponse(
         prompt,
         model: 'qwen3:8b',
         stream: true,
+        messages: history && history.length > 0 ? history : undefined,
+        conversation_id: conversationId,
       }),
       signal: abortSignal,
     });
@@ -117,9 +121,8 @@ export async function executeRealStreamingResponse(
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          const trimmed = line.trim();
-          if (trimmed.startsWith('data:')) {
-            const dataText = trimmed.substring(5).trim();
+          if (line.startsWith('data:')) {
+            const dataText = line.startsWith('data: ') ? line.substring(6) : line.substring(5);
             if (dataText) {
               accumulatedText += dataText;
               const isStillThinking = accumulatedText.includes('<think>') && !accumulatedText.includes('</think>');
@@ -157,6 +160,8 @@ export async function executeRealStreamingResponse(
       body: JSON.stringify({
         prompt,
         model: 'qwen3:8b',
+        messages: history && history.length > 0 ? history : undefined,
+        conversation_id: conversationId,
       }),
       signal: abortSignal,
     });
@@ -194,7 +199,7 @@ export async function executeRealStreamingResponse(
 
     if (res.ok) {
       const data = await res.json();
-      const content = data.response || '';
+      const content = data.response || data.thinking || '';
       if (content) {
         onUpdate({
           isComplete: true,
@@ -224,4 +229,3 @@ export async function executeRealStreamingResponse(
     ],
   });
 }
-

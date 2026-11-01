@@ -1,0 +1,5 @@
+timestamp,service_name,cpu_percent,memory_mb,status
+2026-11-01T10:00:00Z,inference_gateway,14.2,1024,healthy
+2026-11-01T10:01:00Z,vector_memory,8.5,512,healthy
+2026-11-01T10:02:00Z,native_bridge,3.1,256,healthy
+2026-11-01T10:03:00Z,voice_assistant,18.7,2048,active

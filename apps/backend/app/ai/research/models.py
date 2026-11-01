@@ -204,6 +204,10 @@ class DocumentAnalysis(BaseModel):
     tables: List[List[List[str]]] = Field(default_factory=list)
     charts: List[Dict[str, Any]] = Field(default_factory=list)
     summary: str = Field("")
+    line_count: int = Field(0)
+    size_bytes: int = Field(0)
+    ast_symbols: Optional[Dict[str, Any]] = Field(default=None)
+    error: Optional[str] = Field(default=None)
 
 
 class CitationItem(BaseModel):

@@ -97,7 +97,9 @@ from fastapi import status
 from fastapi.responses import JSONResponse
 from fastapi import Request
 
-async def security_exception_handler(request: Request, exc: SecurityException) -> JSONResponse:
+from typing import Any, AsyncGenerator
+
+async def security_exception_handler(request: Request, exc: Any) -> JSONResponse:
     if isinstance(exc, ExpiredTokenError):
         code = status.HTTP_401_UNAUTHORIZED
         msg = "Token has expired."
@@ -135,7 +137,7 @@ from app.conversation.domain.exceptions import (
     ConversationValidationError,
 )
 
-async def conversation_exception_handler(request: Request, exc: ConversationException) -> JSONResponse:
+async def conversation_exception_handler(request: Request, exc: Any) -> JSONResponse:
     if isinstance(exc, ConversationNotFoundError):
         code = status.HTTP_404_NOT_FOUND
     elif isinstance(exc, ConversationAccessDeniedError):
@@ -163,7 +165,7 @@ from app.dashboard.exceptions import (
     ConfigurationNotFoundError,
 )
 
-async def dashboard_exception_handler(request: Request, exc: DashboardException) -> JSONResponse:
+async def dashboard_exception_handler(request: Request, exc: Any) -> JSONResponse:
     if isinstance(
         exc,
         (

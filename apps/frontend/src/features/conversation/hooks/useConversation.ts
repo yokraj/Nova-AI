@@ -55,6 +55,12 @@ export function useConversation() {
     convState.setIsStreaming(true);
     convState.setCurrentThinkingStage('UNDERSTANDING');
 
+    // Extract prior turns for multi-turn conversational context
+    const currentConv = convState.conversations.find((c) => c.id === convState.activeConversationId);
+    const priorTurns = (currentConv?.messages || [])
+      .filter((m) => m.content && m.status === 'complete')
+      .map((m) => ({ role: m.role, content: m.content }));
+
     // Run real streaming response from backend / Ollama
     executeRealStreamingResponse(
       prompt,
@@ -92,7 +98,9 @@ export function useConversation() {
           convState.setCurrentThinkingStage(null);
         }
       },
-      abortController.signal
+      abortController.signal,
+      priorTurns,
+      convState.activeConversationId
     );
   };
 

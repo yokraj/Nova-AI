@@ -4,6 +4,7 @@ import { MockCommandRouter } from '../mock/mockCommandRouter';
 import { MockExecutionEngine } from '../mock/mockExecutionEngine';
 import { AgentRuntime } from '../../ai-runtime/runtime/agentRuntime';
 import { ToolPermissionGuard } from '../../ai-runtime/security/toolPermissionGuard';
+import { APP_CONFIG } from '@/config/app.config';
 
 export const useUniversalCommand = () => {
   const [router] = useState(() => new MockCommandRouter());
@@ -88,7 +89,47 @@ export const useUniversalCommand = () => {
         return;
       }
 
-      // Step 2: Canonical Real AI Execution via AgentRuntime
+      // Step 2: Canonical Real AI Execution
+      // If the command is a query, arithmetic, reasoning, or conversation, route to Real Backend Inference
+      if (cmd.capability?.type === 'CONVERSATION_ENGINE' || cmd.intent?.category === 'CONVERSATION') {
+        try {
+          const token = typeof localStorage !== 'undefined' ? localStorage.getItem('nova_auth_token') : null;
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+
+          const res = await fetch(`${APP_CONFIG.apiBaseUrl}/inference/chat`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              prompt: rawInput,
+              model: 'qwen3:8b',
+              use_deterministic_tools: true,
+            }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const realAnswer = data.content || '';
+            const updatedCmd: UniversalCommand = {
+              ...cmd,
+              executionState: 'COMPLETED',
+              result: {
+                success: true,
+                message: realAnswer,
+                durationSeconds: (data.latency_ms || 500) / 1000,
+              },
+            };
+            setCurrentCommand(updatedCmd);
+            setCommandHistory((prev) => [updatedCmd, ...prev]);
+            setIsExecuting(false);
+            return;
+          }
+        } catch (backendErr) {
+          console.warn('Backend inference unavailable for universal command:', backendErr);
+        }
+      }
+
+      // Step 3: Canonical Autonomous Agent / Native Bridge Execution
       try {
         const agentResult = await agentRuntime.executeGoal(rawInput);
         const updatedCmd: UniversalCommand = {

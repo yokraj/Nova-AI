@@ -53,7 +53,15 @@ async def stream_inference(request: ChatInferenceRequest, db: AsyncSession = Dep
     provider = request.provider or "ollama"
 
     async def event_generator():
-        async for chunk in service.stream_chat(request.prompt, model=model, provider=provider):
+        async for chunk in service.stream_chat(
+            request.prompt,
+            model=model,
+            provider=provider,
+            messages=request.messages,
+            system_prompt=request.system_prompt,
+            max_tokens=request.max_tokens,
+            use_deterministic_tools=request.use_deterministic_tools,
+        ):
             yield f"data: {chunk['text']}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

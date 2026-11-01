@@ -85,8 +85,17 @@ class Settings(BaseSettings):
         return list(DEFAULT_DEV_CORS_ORIGINS)
 
     # SQLite Database Fallback Path
-    SQLITE_DB_PATH: str = "./data/nova_ai.db"
+    SQLITE_DB_PATH: str = Field(default_factory=lambda: str(ROOT_DIR / "data" / "nova_ai.db"))
     USE_SQLITE_FALLBACK: bool = True
+
+    @field_validator("SQLITE_DB_PATH", mode="after")
+    @classmethod
+    def resolve_sqlite_path(cls, v: str) -> str:
+        """Ensures SQLite path is always anchored against ROOT_DIR if relative."""
+        p = Path(v)
+        if not p.is_absolute():
+            p = (ROOT_DIR / p).resolve()
+        return str(p)
 
     @property
     def get_database_url(self) -> str:
@@ -94,9 +103,11 @@ class Settings(BaseSettings):
         if self.DATABASE_URL:
             return self.DATABASE_URL
         if self.USE_SQLITE_FALLBACK:
-            import os
-            os.makedirs("./data", exist_ok=True)
-            return f"sqlite+aiosqlite:///{self.SQLITE_DB_PATH}"
+            db_path = Path(self.SQLITE_DB_PATH)
+            if not db_path.is_absolute():
+                db_path = (ROOT_DIR / db_path).resolve()
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            return f"sqlite+aiosqlite:///{db_path.as_posix()}"
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

@@ -1,0 +1,1225 @@
+{
+  "metadata": {
+    "benchmark_name": "Nova AI Phase 11 Intelligence Benchmark",
+    "timestamp": "2026-11-01T09:04:00Z",
+    "model": "qwen3:8b",
+    "local_provider": "ollama",
+    "deterministic_engine": "SafeASTCalculator"
+  },
+  "summary": {
+    "total_tests": 115,
+    "total_passed": 107,
+    "total_failed": 8,
+    "overall_pass_rate_pct": 93.0,
+    "category_breakdown": {
+      "arithmetic": {
+        "total": 25,
+        "passed": 25,
+        "failed": 0,
+        "pass_rate_pct": 100.0
+      },
+      "tool_use": {
+        "total": 10,
+        "passed": 10,
+        "failed": 0,
+        "pass_rate_pct": 100.0
+      },
+      "multiturn": {
+        "total": 15,
+        "passed": 15,
+        "failed": 0,
+        "pass_rate_pct": 100.0
+      },
+      "instruction_following": {
+        "total": 10,
+        "passed": 6,
+        "failed": 4,
+        "pass_rate_pct": 60.0
+      },
+      "logical_reasoning": {
+        "total": 20,
+        "passed": 18,
+        "failed": 2,
+        "pass_rate_pct": 90.0
+      },
+      "programming": {
+        "total": 20,
+        "passed": 18,
+        "failed": 2,
+        "pass_rate_pct": 90.0
+      },
+      "algorithms": {
+        "total": 15,
+        "passed": 15,
+        "failed": 0,
+        "pass_rate_pct": 100.0
+      }
+    }
+  },
+  "categories": {
+    "arithmetic": [
+      {
+        "test_id": "arithmetic_01",
+        "input": "What is 19 multiplied by 37? Explain step by step.",
+        "expected": 703,
+        "actual": 703,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0005,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_02",
+        "input": "What is 45 plus 98?",
+        "expected": 143,
+        "actual": 143,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0003,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_03",
+        "input": "What is 1000 minus 347?",
+        "expected": 653,
+        "actual": 653,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0003,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_04",
+        "input": "What is 144 divided by 12?",
+        "expected": 12,
+        "actual": 12,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0003,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_05",
+        "input": "What is 25 times 25?",
+        "expected": 625,
+        "actual": 625,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_06",
+        "input": "Calculate 15 * 14",
+        "expected": 210,
+        "actual": 210,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_07",
+        "input": "Calculate 999 + 1001",
+        "expected": 2000,
+        "actual": 2000,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_08",
+        "input": "What is 500 minus 189?",
+        "expected": 311,
+        "actual": 311,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_09",
+        "input": "What is 84 divided by 7?",
+        "expected": 12,
+        "actual": 12,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_10",
+        "input": "What is 13 multiplied by 17?",
+        "expected": 221,
+        "actual": 221,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_11",
+        "input": "Calculate 75 * 4",
+        "expected": 300,
+        "actual": 300,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_12",
+        "input": "What is 1024 divided by 32?",
+        "expected": 32,
+        "actual": 32,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_13",
+        "input": "Calculate 350 + 650",
+        "expected": 1000,
+        "actual": 1000,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_14",
+        "input": "What is 81 divided by 9?",
+        "expected": 9,
+        "actual": 9,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_15",
+        "input": "Calculate 16 * 16",
+        "expected": 256,
+        "actual": 256,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_16",
+        "input": "What is 200 minus 75?",
+        "expected": 125,
+        "actual": 125,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_17",
+        "input": "Calculate 12 * 12",
+        "expected": 144,
+        "actual": 144,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_18",
+        "input": "What is 625 divided by 25?",
+        "expected": 25,
+        "actual": 25,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_19",
+        "input": "Calculate 48 + 52",
+        "expected": 100,
+        "actual": 100,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_20",
+        "input": "What is 90 minus 45?",
+        "expected": 45,
+        "actual": 45,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_21",
+        "input": "What is 8 multiplied by 9?",
+        "expected": 72,
+        "actual": 72,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_22",
+        "input": "What is 100 divided by 4?",
+        "expected": 25,
+        "actual": 25,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_23",
+        "input": "Calculate 33 * 3",
+        "expected": 99,
+        "actual": 99,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_24",
+        "input": "What is 50 plus 150?",
+        "expected": 200,
+        "actual": 200,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "arithmetic_25",
+        "input": "What is 500 divided by 10?",
+        "expected": 50,
+        "actual": 50,
+        "model_or_provider": "deterministic_calculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      }
+    ],
+    "tool_use": [
+      {
+        "test_id": "tool_01",
+        "input": "safe_evaluate_expression('19 * 37')",
+        "expected": 703,
+        "actual": 703,
+        "model_or_provider": "SafeASTCalculator",
+        "duration_seconds": 0.0001,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "tool_02",
+        "input": "safe_evaluate_expression('45 + 98')",
+        "expected": 143,
+        "actual": 143,
+        "model_or_provider": "SafeASTCalculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "tool_03",
+        "input": "safe_evaluate_expression('100 / 0')",
+        "expected": "ZeroDivisionError",
+        "actual": "ZeroDivisionError caught",
+        "model_or_provider": "SafeASTCalculator",
+        "duration_seconds": 0.0,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "tool_04",
+        "input": "validate_syntax('def add(a, b): return a + b')",
+        "expected": true,
+        "actual": true,
+        "model_or_provider": "SafeCodeValidator",
+        "duration_seconds": 0.0001,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "tool_05",
+        "input": "validate_syntax('def broken_func(: return')",
+        "expected": false,
+        "actual": false,
+        "model_or_provider": "SafeCodeValidator",
+        "duration_seconds": 0.0004,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "tool_06",
+        "input": "execute_safely('print(\"NOVA_TOOL_OK\")')",
+        "expected": "NOVA_TOOL_OK",
+        "actual": "NOVA_TOOL_OK",
+        "model_or_provider": "SafeCodeExecutor",
+        "duration_seconds": 0.075,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "tool_07",
+        "input": "execute_safely('while True: pass', timeout=1.0)",
+        "expected": "Timed out",
+        "actual": "Timeout caught",
+        "model_or_provider": "SafeCodeExecutor",
+        "duration_seconds": 1.0306,
+        "status": "PASS",
+        "failure_reason": "Execution timed out after 1.0s limit"
+      },
+      {
+        "test_id": "tool_08",
+        "input": "validate_math_in_response('What is 19 * 37?', '... 703 ...')",
+        "expected": true,
+        "actual": true,
+        "model_or_provider": "ResponseValidator",
+        "duration_seconds": 0.0002,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "tool_09",
+        "input": "validate_code_in_response('```python def is_even(n): return n%2==0 ```')",
+        "expected": true,
+        "actual": true,
+        "model_or_provider": "ResponseValidator",
+        "duration_seconds": 0.0006,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "tool_10",
+        "input": "classify_task('Write a Python decorator...')",
+        "expected": "Programming",
+        "actual": "Programming",
+        "model_or_provider": "TaskClassifier",
+        "duration_seconds": 0.0005,
+        "status": "PASS",
+        "failure_reason": null
+      }
+    ],
+    "multiturn": [
+      {
+        "test_id": "multiturn_01",
+        "input": "Turn 1: 'My name is Alice.' -> Turn 2: 'What is my name?'",
+        "expected": "Contextual retention of: ['alice']",
+        "actual": "<think>Okay, the user asked, \"What is my name?\" after I previously noted that their name is Alice. L",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 11.72,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_02",
+        "input": "Turn 1: 'I live in Seattle.' -> Turn 2: 'What city do I live in?'",
+        "expected": "Contextual retention of: ['seattle']",
+        "actual": "<think>Okay, the user asked, \"What city do I live in?\" Let me check the conversation history. Earlie",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 9.75,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_03",
+        "input": "Turn 1: 'The server port is 8080.' -> Turn 2: 'What is the server port?'",
+        "expected": "Contextual retention of: ['8080']",
+        "actual": "<think>Okay, the user asked, \"What is the server port?\" I need to recall the previous conversation. ",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 12.12,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_04",
+        "input": "Turn 1: 'I am building a React frontend.' -> Turn 2: 'What frontend framework am I using?'",
+        "expected": "Contextual retention of: ['react']",
+        "actual": "<think>Okay, the user is asking, \"What frontend framework am I using?\" given that they mentioned the",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 11.1,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_05",
+        "input": "Turn 1: 'Our database is PostgreSQL.' -> Turn 2: 'What database are we using?'",
+        "expected": "Contextual retention of: ['postgres', 'postgresql']",
+        "actual": "<think>Okay, the user is asking, \"What database are we using?\" I need to check the previous conversa",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.66,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_06",
+        "input": "Turn 1: 'We have 10 servers deployed.' -> Turn 2: 'How many servers are deployed?'",
+        "expected": "Contextual retention of: ['10', 'ten']",
+        "actual": "<think>Okay, the user asked, \"How many servers are deployed?\" I need to figure out the correct answe",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.71,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_07",
+        "input": "Turn 1: 'The deployment environment is staging.' -> Turn 2: 'What environment are we deploying to?'",
+        "expected": "Contextual retention of: ['staging']",
+        "actual": "<think>Okay, the user is asking, \"What environment are we deploying to?\" Let me recall the previous ",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.57,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_08",
+        "input": "Turn 1: 'The API rate limit is 100 requests per minute.' -> Turn 2: 'What is the rate limit?'",
+        "expected": "Contextual retention of: ['100']",
+        "actual": "<think>Okay, the user asked, \"What is the rate limit?\" I need to make sure I understand the context.",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.76,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_09",
+        "input": "Turn 1: 'The user role is administrator.' -> Turn 2: 'What is the user's role?'",
+        "expected": "Contextual retention of: ['admin', 'administrator']",
+        "actual": "<think>Okay, the user is asking, \"What is the user's role?\" Let me think about how to respond.\n\nFirs",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.71,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_10",
+        "input": "Turn 1: 'The project code name is Project Nova.' -> Turn 2: 'What is the project code name?'",
+        "expected": "Contextual retention of: ['nova', 'project nova']",
+        "actual": "<think>Okay, the user asked, \"What is the project code name?\" Let me check the conversation history.",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.36,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_11",
+        "input": "Turn 1: 'The backup directory is /var/backups.' -> Turn 2: 'Where are backups saved?'",
+        "expected": "Contextual retention of: ['/var/backups', 'backups']",
+        "actual": "<think>Okay, the user is asking where backups are saved, and they mentioned the directory is /var/ba",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.72,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_12",
+        "input": "Turn 1: 'My favorite language is Rust.' -> Turn 2: 'Which language did I say was my favorite?'",
+        "expected": "Contextual retention of: ['rust']",
+        "actual": "<think>Okay, the user asked, \"Which language did I say was my favorite?\" Let me check the conversati",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 9.49,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_13",
+        "input": "Turn 1: 'Let base_price = 150.' -> Turn 2: 'What is base_price?'",
+        "expected": "Contextual retention of: ['150']",
+        "actual": "<think>Okay, the user is asking \"What is base_price?\" given that base_price was set to 150 earlier. ",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.59,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_14",
+        "input": "Turn 1: 'The team lead is Sarah.' -> Turn 2: 'Who is the team lead?'",
+        "expected": "Contextual retention of: ['sarah']",
+        "actual": "<think>Okay, the user asked, \"Who is the team lead?\" I need to recall the previous conversation. Ear",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 9.6,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "multiturn_15",
+        "input": "Turn 1: 'The timeout is set to 30 seconds.' -> Turn 2: 'What is the timeout value?'",
+        "expected": "Contextual retention of: ['30']",
+        "actual": "<think>Okay, the user asked, \"What is the timeout value?\" after I mentioned that the timeout is set ",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.82,
+        "status": "PASS",
+        "failure_reason": null
+      }
+    ],
+    "instruction_following": [
+      {
+        "test_id": "instruction_01",
+        "input": "Respond with exactly the single word: CONFIRMED. Do not add punctuation or any other words.",
+        "expected": "Strict compliance with prompt format constraints",
+        "actual": "<think>Okay, the user wants me to respond with exactly the single word \"CONFIRMED\" without any punct",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.42,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "instruction_02",
+        "input": "List exactly three primary colors, one per line, with no extra text.",
+        "expected": "Strict compliance with prompt format constraints",
+        "actual": "<think>Okay, the user is asking for exactly three primary colors, one per line, with no extra text. ",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.86,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "instruction_03",
+        "input": "Output a valid JSON object with keys 'status' and 'version'. No explanations or markdown.",
+        "expected": "Strict compliance with prompt format constraints",
+        "actual": "<think>Okay, the user wants me to output a valid JSON object with the keys 'status' and 'version'. L",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.69,
+        "status": "FAIL",
+        "failure_reason": "Failed specific formatting constraint"
+      },
+      {
+        "test_id": "instruction_04",
+        "input": "Translate 'apple' to Spanish. Output only the Spanish word.",
+        "expected": "Strict compliance with prompt format constraints",
+        "actual": "<think>Okay, the user wants to translate 'apple' into Spanish. Let me think. The word for apple in S",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 9.7,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "instruction_05",
+        "input": "Answer in all uppercase letters: What is the capital of France?",
+        "expected": "Strict compliance with prompt format constraints",
+        "actual": "<think>Okay, the user is asking for the capital of France. Let me think. I know that France is a cou",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 11.05,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "instruction_06",
+        "input": "Respond with a single number only: What is 10 plus 5?",
+        "expected": "Strict compliance with prompt format constraints",
+        "actual": "**Result**: 15\n\n**Step-by-Step Explanation**:\n1. Problem: Add 10 and 5.\n2. 10 + 5 = 15.",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 0.02,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "instruction_07",
+        "input": "Answer with YES or NO only: Is Python an interpreted language?",
+        "expected": "Strict compliance with prompt format constraints",
+        "actual": "<think>Okay, the user is asking if Python is an interpreted language. Let me think about this.\n\nFirs",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 11.48,
+        "status": "FAIL",
+        "failure_reason": "Failed specific formatting constraint"
+      },
+      {
+        "test_id": "instruction_08",
+        "input": "Format your response as a 2-column Markdown table showing three operating systems and their creators.",
+        "expected": "Strict compliance with prompt format constraints",
+        "actual": "<think>Okay, the user wants a 2-column Markdown table with three operating systems and their creator",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 10.77,
+        "status": "FAIL",
+        "failure_reason": "Failed specific formatting constraint"
+      },
+      {
+        "test_id": "instruction_09",
+        "input": "Provide two bullet points explaining what an API is. Start each bullet with an asterisk.",
+        "expected": "Strict compliance with prompt format constraints",
+        "actual": "<think>Okay, the user wants two bullet points explaining what an API is, each starting with an aster",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 11.01,
+        "status": "FAIL",
+        "failure_reason": "Failed specific formatting constraint"
+      },
+      {
+        "test_id": "instruction_10",
+        "input": "Prefix your entire response with [VERIFIED]:",
+        "expected": "Strict compliance with prompt format constraints",
+        "actual": "<think>Okay, the user wants me to prefix my entire response with [VERIFIED]. Let me make sure I unde",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 14.36,
+        "status": "PASS",
+        "failure_reason": null
+      }
+    ],
+    "logical_reasoning": [
+      {
+        "test_id": "logic_01",
+        "input": "If all roses are flowers and all flowers need water, do all roses need water? Answer with YES or NO and explain briefly.",
+        "expected": "Contains one of: ['yes']",
+        "actual": "<think>Okay, let's see. The question is: If all roses are flowers and all flowers need water, do all roses need water? I",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 13.6,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_02",
+        "input": "A is taller than B. B is taller than C. Who is the shortest person among A, B, and C?",
+        "expected": "Contains one of: ['c', 'c is']",
+        "actual": "<think>Okay, let's see. The problem says that A is taller than B, and B is taller than C. So I need to figure out who is",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 13.9,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_03",
+        "input": "If it rains, the street gets wet. The street is wet. Does that logically prove it rained? Answer YES or NO and explain.",
+        "expected": "Contains one of: ['no', 'does not prove']",
+        "actual": "<think>Okay, let's see. The user is asking if the statement \"If it rains, the street gets wet. The street is wet. Does t",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 13.6,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_04",
+        "input": "John is older than Mary. Mary is older than David. Is John older than David? Answer YES or NO.",
+        "expected": "Contains one of: ['yes']",
+        "actual": "<think>Okay, let's see. The problem says John is older than Mary, and Mary is older than David. So, we need to figure ou",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 14.07,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_05",
+        "input": "No fish can walk. A salmon is a fish. Can a salmon walk? Answer YES or NO.",
+        "expected": "Contains one of: ['no']",
+        "actual": "<think>Okay, let's see. The question is about whether a salmon can walk. The given premises are: \"No fish can walk.\" and",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 14.53,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_06",
+        "input": "If today is Tuesday, what day was yesterday?",
+        "expected": "Contains one of: ['monday']",
+        "actual": "<think>Okay, let's see. The question is: If today is Tuesday, what day was yesterday? Hmm, so today is Tuesday, and I ne",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 13.86,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_07",
+        "input": "If tomorrow is Saturday, what day is today?",
+        "expected": "Contains one of: ['friday']",
+        "actual": "<think>Okay, let's see. The question is: If tomorrow is Saturday, what day is today? Hmm, I need to figure out what day ",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 13.76,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_08",
+        "input": "A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost in cents?",
+        "expected": "Contains one of: ['5', '0.05', 'five']",
+        "actual": "<think>Okay, let me try to figure out this problem. So, the question is: A bat and a ball cost $1.10 in total. The bat c",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 14.71,
+        "status": "FAIL",
+        "failure_reason": "Expected one of ['5', '0.05', 'five'] in answer"
+      },
+      {
+        "test_id": "logic_09",
+        "input": "There are 3 apples on a table. You take away 2. How many apples do you have?",
+        "expected": "Contains one of: ['2', 'two']",
+        "actual": "<think>Okay, let's see. The question is: There are 3 apples on a table. You take away 2. How many apples do you have?\n\nH",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 16.98,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_10",
+        "input": "A farmer has 17 sheep. All but 9 die. How many sheep are left alive?",
+        "expected": "Contains one of: ['9', 'nine']",
+        "actual": "<think>Okay, let's see. The problem says a farmer has 17 sheep, and all but 9 die. How many are left alive? Hmm. So, fir",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 16.49,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_11",
+        "input": "If an electric train travels north at 60 mph and the wind blows west, which way does the smoke blow?",
+        "expected": "Contains one of: ['no smoke', 'electric', \"doesn't blow\"]",
+        "actual": "<think>Okay, let's see. The question is about an electric train traveling north at 60 mph, and there's wind blowing west",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 20.43,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_12",
+        "input": "A doctor gives you 3 pills and tells you to take one every 30 minutes. How many minutes do all three pills last?",
+        "expected": "Contains one of: ['60', '1 hour', 'sixty']",
+        "actual": "<think>Okay, let me try to figure out this problem. So, the doctor gives me three pills and tells me to take one every 3",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 19.09,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_13",
+        "input": "Mary's father has five daughters: Nana, Nene, Nini, Nono, and who?",
+        "expected": "Contains one of: ['mary']",
+        "actual": "<think>Okay, let's see. The question is about Mary's father having five daughters, and the names given are Nana, Nene, N",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 18.8,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_14",
+        "input": "Which is heavier: a pound of feathers or a pound of gold or bricks?",
+        "expected": "Contains one of: ['same', 'equal', 'neither']",
+        "actual": "<think>Okay, let's see. The question is asking which is heavier: a pound of feathers, a pound of gold, or a pound of bri",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 18.71,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_15",
+        "input": "If two's company and three's a crowd, what are four and five? Answer mathematically.",
+        "expected": "Contains one of: ['9', 'nine']",
+        "actual": "<think>Okay, so the question is a play on the phrase \"two's company and three's a crowd,\" and it's asking what four and ",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 18.7,
+        "status": "FAIL",
+        "failure_reason": "Expected one of ['9', 'nine'] in answer"
+      },
+      {
+        "test_id": "logic_16",
+        "input": "All squares are rectangles. Are all rectangles squares? Answer YES or NO.",
+        "expected": "Contains one of: ['no']",
+        "actual": "<think>Okay, so the question is: \"All squares are rectangles. Are all rectangles squares? Answer YES or NO.\" Hmm, let me",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 18.26,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_17",
+        "input": "Can a man legally marry his widow's sister under standard law? Explain why or why not.",
+        "expected": "Contains one of: ['dead', 'no', 'he is dead']",
+        "actual": "<think>Okay, so the question is whether a man can legally marry his widow's sister under standard law. Hmm, let me think",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 16.93,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_18",
+        "input": "Before Mount Everest was discovered, what was the highest mountain on Earth?",
+        "expected": "Contains one of: ['everest', 'mount everest']",
+        "actual": "<think>Okay, the user is asking about the highest mountain on Earth before Mount Everest was discovered. Let me think. I",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 18.48,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_19",
+        "input": "If you overtake the person in second place in a footrace, what place are you in?",
+        "expected": "Contains one of: ['second', '2nd', '2']",
+        "actual": "<think>Okay, let's see. The question is: If you overtake the person in second place in a footrace, what place are you in",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 18.94,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "logic_20",
+        "input": "Some cats are black. All black animals are nocturnal. Are some cats nocturnal? Answer YES or NO.",
+        "expected": "Contains one of: ['yes']",
+        "actual": "<think>Okay, let's try to figure this out. The question is: Some cats are black. All black animals are nocturnal. Are so",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 20.14,
+        "status": "PASS",
+        "failure_reason": null
+      }
+    ],
+    "programming": [
+      {
+        "test_id": "programming_01",
+        "input": "Write a Python function reverse_string(s) to reverse a string.",
+        "expected": "Valid Python syntax containing 'reverse_string'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 40.29,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_02",
+        "input": "Write a Python decorator time_it that prints execution time of a function.",
+        "expected": "Valid Python syntax containing 'def time_it'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 36.2,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_03",
+        "input": "Write a Python function count_frequencies(s) returning a dict of char counts.",
+        "expected": "Valid Python syntax containing 'count_frequencies'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 35.22,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_04",
+        "input": "Write a Python function flatten_list(nested) to flatten a 2D list.",
+        "expected": "Valid Python syntax containing 'flatten_list'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 33.79,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_05",
+        "input": "Write a Python function is_palindrome(s) returning True if string is palindrome.",
+        "expected": "Valid Python syntax containing 'is_palindrome'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 33.2,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_06",
+        "input": "Write a Python function find_max(numbers) without using the built-in max().",
+        "expected": "Valid Python syntax containing 'find_max'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 30.57,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_07",
+        "input": "Write a Python function merge_sorted(a, b) that merges two sorted lists.",
+        "expected": "Valid Python syntax containing 'merge_sorted'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 30.69,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_08",
+        "input": "Write a Python class BankAccount with deposit(amt) and withdraw(amt) methods.",
+        "expected": "Valid Python syntax containing 'class BankAccount'",
+        "actual": "Syntax valid: True, Symbol found: False",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 33.33,
+        "status": "FAIL",
+        "failure_reason": "Code syntax error: [] or symbol missing"
+      },
+      {
+        "test_id": "programming_09",
+        "input": "Write a Python generator fibonacci_gen(n) yielding Fibonacci numbers up to n.",
+        "expected": "Valid Python syntax containing 'yield'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 33.99,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_10",
+        "input": "Write a Python function remove_duplicates(items) preserving original order.",
+        "expected": "Valid Python syntax containing 'remove_duplicates'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 35.64,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_11",
+        "input": "Write a Python function factorial(n) using recursion.",
+        "expected": "Valid Python syntax containing 'factorial'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 38.94,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_12",
+        "input": "Write a Python function filter_evens(nums) using list comprehension.",
+        "expected": "Valid Python syntax containing 'filter_evens'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 34.28,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_13",
+        "input": "Write a Python function find_intersection(set1, set2) returning common items.",
+        "expected": "Valid Python syntax containing 'find_intersection'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 38.19,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_14",
+        "input": "Write a Python context manager class SafeFileOp with __enter__ and __exit__.",
+        "expected": "Valid Python syntax containing '__enter__'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 41.85,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_15",
+        "input": "Write a Python function are_anagrams(s1, s2) returning True if strings are anagrams.",
+        "expected": "Valid Python syntax containing 'are_anagrams'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 36.15,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_16",
+        "input": "Write a Python function safe_int(s) returning int or None on ValueError.",
+        "expected": "Valid Python syntax containing 'safe_int'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 31.78,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_17",
+        "input": "Write a Python function second_largest(numbers) returning second highest number.",
+        "expected": "Valid Python syntax containing 'second_largest'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 40.11,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_18",
+        "input": "Write a Python class EmailValidator with a @staticmethod is_valid_email(email).",
+        "expected": "Valid Python syntax containing '@staticmethod'",
+        "actual": "Syntax valid: True, Symbol found: False",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 40.24,
+        "status": "FAIL",
+        "failure_reason": "Code syntax error: [] or symbol missing"
+      },
+      {
+        "test_id": "programming_19",
+        "input": "Write a Python function chunk_list(items, k) returning chunks of size k.",
+        "expected": "Valid Python syntax containing 'chunk_list'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 43.28,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "programming_20",
+        "input": "Write a Python function parse_json_key(json_str, key) returning value safely.",
+        "expected": "Valid Python syntax containing 'parse_json_key'",
+        "actual": "Syntax valid: True, Symbol found: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 43.47,
+        "status": "PASS",
+        "failure_reason": null
+      }
+    ],
+    "algorithms": [
+      {
+        "test_id": "algorithm_01",
+        "input": "Write a Python program to check whether 29 is prime. Explain the algorithm.",
+        "expected": "Covers concepts: ['29', 'prime']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 44.69,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_02",
+        "input": "Explain binary search and provide a Python implementation with O(log n) time complexity.",
+        "expected": "Covers concepts: ['binary_search', 'mid']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 40.39,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_03",
+        "input": "Write a Python function for Merge Sort and explain its divide-and-conquer strategy.",
+        "expected": "Covers concepts: ['merge', 'split']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 39.91,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_04",
+        "input": "Explain Quick Sort partition logic and write a working Python implementation.",
+        "expected": "Covers concepts: ['partition', 'pivot']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 38.76,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_05",
+        "input": "Write a Python function to solve the Two Sum problem using a hash map in O(n) time.",
+        "expected": "Covers concepts: ['two_sum', 'dict']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 36.69,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_06",
+        "input": "Write a Python implementation of Breadth-First Search (BFS) on an adjacency list graph.",
+        "expected": "Covers concepts: ['queue', 'bfs']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 31.9,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_07",
+        "input": "Write a Python implementation of Depth-First Search (DFS) on an adjacency list graph.",
+        "expected": "Covers concepts: ['dfs', 'visited']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 31.59,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_08",
+        "input": "Explain Dijkstra's shortest path algorithm and write a Python implementation with heapq.",
+        "expected": "Covers concepts: ['heapq', 'dijkstra']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 36.51,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_09",
+        "input": "Write a Python function to find the longest common prefix among an array of strings.",
+        "expected": "Covers concepts: ['prefix']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 40.52,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_10",
+        "input": "Write a Python program to detect a cycle in a linked list using Floyd's Tortoise and Hare algorithm.",
+        "expected": "Covers concepts: ['slow', 'fast']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 36.6,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_11",
+        "input": "Write a Python function to compute the nth Fibonacci number using dynamic programming (tabulation).",
+        "expected": "Covers concepts: ['dp', 'fib']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 36.53,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_12",
+        "input": "Write a Python function to invert a binary tree and explain the recursive approach.",
+        "expected": "Covers concepts: ['invert', 'left', 'right']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 37.13,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_13",
+        "input": "Explain the Dutch National Flag algorithm and implement sorting of 0s, 1s, and 2s in-place.",
+        "expected": "Covers concepts: ['low', 'mid', 'high']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 37.48,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_14",
+        "input": "Write a Python function to find the maximum subarray sum using Kadane's algorithm.",
+        "expected": "Covers concepts: ['kadane', 'max_sum']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 33.68,
+        "status": "PASS",
+        "failure_reason": null
+      },
+      {
+        "test_id": "algorithm_15",
+        "input": "Write a Python function to solve the Coin Change problem using dynamic programming.",
+        "expected": "Covers concepts: ['coin', 'min']",
+        "actual": "Matches criteria: True",
+        "model_or_provider": "qwen3:8b",
+        "duration_seconds": 35.71,
+        "status": "PASS",
+        "failure_reason": null
+      }
+    ]
+  }
+}

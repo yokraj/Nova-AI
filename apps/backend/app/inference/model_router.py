@@ -41,9 +41,10 @@ class ModelRouter:
             user_provider_override=user_provider,
         )
 
-        logger.info("request_routed", model=sel_res["model"], provider=sel_res["provider"])
+        logger.info("request_routed", model=sel_res["model"], provider=sel_res["provider"], category=task_res["task_category"])
         return {
             "task_category": task_res["task_category"],
+            "is_deterministic_arithmetic": task_res.get("is_deterministic_arithmetic", False),
             "detected_capabilities": caps,
             "selected_model": sel_res["model"],
             "selected_provider": sel_res["provider"],

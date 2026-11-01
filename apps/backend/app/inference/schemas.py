@@ -9,16 +9,26 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
 
+class MessageTurn(BaseModel):
+    """Single conversation turn representation."""
+
+    role: str = Field(description="Role: 'user', 'assistant', or 'system'")
+    content: str = Field(description="Message body text")
+
+
 class ChatInferenceRequest(BaseModel):
     """Request schema for chat completion inference."""
 
     prompt: str = Field(min_length=1, description="Prompt text or conversation message")
+    conversation_id: Optional[str] = Field(default=None, description="Conversation thread identifier")
+    messages: Optional[List[Dict[str, str]]] = Field(default=None, description="Prior conversation history turns")
     model: Optional[str] = Field(default=None, description="Optional target model override")
     provider: Optional[str] = Field(default=None, description="Optional target provider override")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: Optional[int] = Field(default=2048, ge=1)
     system_prompt: Optional[str] = Field(default=None)
     stream: bool = Field(default=False)
+    use_deterministic_tools: bool = Field(default=True, description="Enable deterministic tools for arithmetic and safe code execution")
 
 
 class ChatInferenceResponse(BaseModel):
@@ -34,6 +44,8 @@ class ChatInferenceResponse(BaseModel):
     total_tokens: int
     latency_ms: float
     created_at: datetime
+    is_deterministic: bool = Field(default=False, description="Whether resolved by deterministic engine")
+    verification: Optional[Dict[str, Any]] = Field(default=None, description="Response validation results")
 
 
 class TaskClassificationRequest(BaseModel):
@@ -49,6 +61,7 @@ class TaskClassificationResponse(BaseModel):
     detected_capabilities: List[str]
     recommended_model: str
     confidence: float
+    is_deterministic_arithmetic: bool = False
 
 
 class ModelCatalogItem(BaseModel):

@@ -12,12 +12,12 @@ export interface ModelConfig {
 const DEFAULT_CONFIG: ModelConfig = {
   provider: 'LOCAL',
   baseUrl: 'http://127.0.0.1:11434/v1',
-  model: 'llama3.2',
+  model: 'qwen3:8b',
   temperature: 0.1,
   maxTokens: 2048,
-  timeoutMs: 30000,
+  timeoutMs: 90000,
   enableLocalModel: true,
-  fallbackToMock: true,
+  fallbackToMock: false,
 };
 
 const STORAGE_KEY = 'nova_model_config';
