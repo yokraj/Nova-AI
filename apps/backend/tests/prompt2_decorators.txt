@@ -1,0 +1,105 @@
+Python decorators are a powerful feature that allows you to modify or extend the behavior of functions or classes without changing their original code. They act as **"wrappers"** around functions, adding functionality before or after the function's execution. Decorators are defined using the `@decorator` syntax, which is syntactic sugar for wrapping a function with another function.
+
+---
+
+### **Key Concepts**
+1. **Decorator Function**: A function that takes another function as input and returns a new function that wraps the original one.
+2. **Syntactic Sugar**: The `@decorator` syntax simplifies applying decorators to functions.
+3. **Function Wrapping**: The decorator function wraps the original function, enabling additional behavior (e.g., logging, timing, authentication) without altering the original function.
+
+---
+
+### **Example: Logging Decorator**
+Here's a simple example of a decorator that logs function calls:
+
+```python
+from functools import wraps
+
+def log_decorator(func):
+    @wraps(func)  # Preserves the original function's metadata
+    def wrapper(*args, **kwargs):
+        print(f"Calling function {func.__name__} with args {args} and kwargs {kwargs}")
+        result = func(*args, **kwargs)
+        print(f"Function {func.__name__} completed")
+        return result
+    return wrapper
+
+@log_decorator
+def add(a, b):
+    return a + b
+
+# Example usage
+add(3, 4)
+```
+
+---
+
+### **Explanation**
+1. **Decorator Definition**:
+   - `log_decorator` is a function that takes `func` (the target function) as input.
+   - The `wrapper` function handles the logging logic and calls the original function.
+
+2. **Preserving Metadata**:
+   - `@wraps(func)` ensures that the original function's name, docstring, and other metadata are preserved.
+
+3. **Usage**:
+   - The `@log_decorator` syntax applies the decorator to the `add` function.
+   - When `add(3, 4)` is called, the `wrapper` function is executed:
+     - It logs the function name and arguments.
+     - Calls the original `add` function.
+     - Logs a completion message.
+
+---
+
+### **Output**
+When you run the code:
+```
+Calling function add with args (3, 4) and kwargs {}
+Function add completed
+```
+
+---
+
+### **Use Cases**
+Decorators are commonly used for:
+- **Logging** (as shown)
+- **Timing** (measuring execution duration)
+- **Authentication** (checking user permissions)
+- **Caching** (storing results of expensive function calls)
+- **Validation** (ensuring inputs meet certain criteria)
+
+---
+
+### **Advanced Example: Timing a Function**
+Here’s a decorator that measures how long a function takes to execute:
+
+```python
+import time
+from functools import wraps
+
+def timer_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(f"Function {func.__name__} took {end - start:.4f} seconds")
+        return result
+    return wrapper
+
+@timer_decorator
+def sleep_seconds(seconds):
+    time.sleep(seconds)
+
+sleep_seconds(2)
+```
+
+**Output**:
+```
+Function sleep_seconds took 2.0001 seconds
+```
+
+---
+
+### **Conclusion**
+Decorators are a clean and reusable way to add functionality to functions or classes in Python. By using them, you can keep your code modular and maintainable, while avoiding repetitive boilerplate code.
