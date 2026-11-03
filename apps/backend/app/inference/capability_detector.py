@@ -21,7 +21,7 @@ class CapabilityDetector:
         caps: List[str] = ["Function calling", "Streaming"]
 
         p_lower = prompt.lower()
-        if task_category in ["Coding", "Debugging", "Architecture"]:
+        if task_category in ["Coding", "Debugging", "Architecture", "Programming"]:
             caps.append("Coding")
 
         if task_category == "Vision" or "image" in p_lower:

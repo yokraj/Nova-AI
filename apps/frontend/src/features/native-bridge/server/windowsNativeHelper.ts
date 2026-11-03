@@ -339,9 +339,9 @@ $sb = New-Object System.Text.StringBuilder 512
 [void][Win32.User32]::GetWindowText($hwnd, $sb, 512)
 $title = $sb.ToString()
 
-$pid = 0
-[void][Win32.User32]::GetWindowThreadProcessId($hwnd, [ref]$pid)
-$proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+$procId = [uint32]0
+[void][Win32.User32]::GetWindowThreadProcessId($hwnd, [ref]$procId)
+$proc = Get-Process -Id $procId -ErrorAction SilentlyContinue
 
 $rect = New-Object Win32.User32+RECT
 [void][Win32.User32]::GetWindowRect($hwnd, [ref]$rect)
@@ -349,7 +349,7 @@ $rect = New-Object Win32.User32+RECT
 $w = $rect.Right - $rect.Left
 $h = $rect.Bottom - $rect.Top
 
-Write-Output "$($proc.ProcessName)|$title|$pid|$($rect.Left)|$($rect.Top)|$w|$h"
+Write-Output "$($proc.ProcessName)|$title|$procId|$($rect.Left)|$($rect.Top)|$w|$h"
 `;
     const res = await this.runPowerShell(psScript);
     if (res.code === 0 && res.stdout) {
@@ -373,9 +373,60 @@ Write-Output "$($proc.ProcessName)|$title|$pid|$($rect.Left)|$($rect.Top)|$w|$h"
 
   async getWindowList(): Promise<WindowInfo[]> {
     const psScript = `
+Add-Type -MemberDefinition '
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder text, int count);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+' -Name User32List -Namespace Win32 -ErrorAction SilentlyContinue
+
+$foundWindows = @{}
+
 Get-Process | Where-Object { $_.MainWindowTitle -ne "" } | ForEach-Object {
-  Write-Output "$($_.ProcessName)|$($_.MainWindowTitle)|$($_.Id)"
+  $key = "$($_.Id)_$($_.MainWindowTitle)"
+  if (-not $foundWindows.ContainsKey($key)) {
+    $foundWindows[$key] = $true
+    Write-Output "$($_.ProcessName)|$($_.MainWindowTitle)|$($_.Id)"
+  }
 }
+
+$fgHwnd = [Win32.User32List]::GetForegroundWindow()
+if ($fgHwnd -ne [IntPtr]::Zero) {
+  $sb = New-Object System.Text.StringBuilder 512
+  [void][Win32.User32List]::GetWindowText($fgHwnd, $sb, 512)
+  $t = $sb.ToString()
+  if ($t) {
+    $procId = [uint32]0
+    [void][Win32.User32List]::GetWindowThreadProcessId($fgHwnd, [ref]$procId)
+    $p = Get-Process -Id $procId -ErrorAction SilentlyContinue
+    $key = "$($procId)_$t"
+    if (-not $foundWindows.ContainsKey($key)) {
+      $foundWindows[$key] = $true
+      Write-Output "$($p.ProcessName)|$t|$procId"
+    }
+  }
+}
+
+Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes -ErrorAction SilentlyContinue
+try {
+  $root = [System.Windows.Automation.AutomationElement]::RootElement
+  $condition = [System.Windows.Automation.Condition]::TrueCondition
+  $windows = $root.FindAll([System.Windows.Automation.TreeScope]::Children, $condition)
+  foreach ($w in $windows) {
+    try {
+      $t = $w.Current.Name
+      $pId = $w.Current.ProcessId
+      if ($t -and $pId -gt 4) {
+        $p = Get-Process -Id $pId -ErrorAction SilentlyContinue
+        $pName = if ($p) { $p.ProcessName } else { "app" }
+        $key = "$($pId)_$t"
+        if (-not $foundWindows.ContainsKey($key)) {
+          $foundWindows[$key] = $true
+          Write-Output "$($pName)|$t|$pId"
+        }
+      }
+    } catch {}
+  }
+} catch {}
 `;
     const res = await this.runPowerShell(psScript);
     if (res.code === 0 && res.stdout) {
@@ -402,17 +453,22 @@ Get-Process | Where-Object { $_.MainWindowTitle -ne "" } | ForEach-Object {
 
     const psScript = `
 $found = $false
+$wshell = New-Object -ComObject WScript.Shell
+if ($wshell.AppActivate("${escaped}")) {
+  Write-Output "SUCCESS"
+  exit 0
+}
+
 for ($i = 0; $i -lt 8; $i++) {
   $procs = Get-Process | Where-Object { $_.ProcessName -like "*${escaped}*" -or $_.MainWindowTitle -like "*${escaped}*" }
   if ($procs) {
     foreach ($target in $procs) {
       if ($target.MainWindowHandle -ne [IntPtr]::Zero) {
-        Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);' -Name User32 -Namespace Win32 -ErrorAction SilentlyContinue
-        [Win32.User32]::ShowWindow($target.MainWindowHandle, 9)
-        [Win32.User32]::SetForegroundWindow($target.MainWindowHandle)
+        Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd); [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);' -Name User32Focus -Namespace Win32 -ErrorAction SilentlyContinue
+        [Win32.User32Focus]::ShowWindow($target.MainWindowHandle, 9)
+        [Win32.User32Focus]::SetForegroundWindow($target.MainWindowHandle)
       }
-      $wshell = New-Object -ComObject WScript.Shell
-      if ($wshell.AppActivate($target.Id)) {
+      if ($wshell.AppActivate($target.Id) -or ($target.MainWindowTitle -and $wshell.AppActivate($target.MainWindowTitle))) {
         Write-Output "SUCCESS"
         $found = $true
         break
@@ -420,6 +476,41 @@ for ($i = 0; $i -lt 8; $i++) {
     }
   }
   if ($found) { break }
+
+  # UIA Fallback for modern packaged apps (WinUI 3 Notepad, Calculator, etc.)
+  try {
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes -ErrorAction SilentlyContinue
+    $root = [System.Windows.Automation.AutomationElement]::RootElement
+    $condition = [System.Windows.Automation.Condition]::TrueCondition
+    $windows = $root.FindAll([System.Windows.Automation.TreeScope]::Children, $condition)
+    foreach ($w in $windows) {
+      try {
+        $t = $w.Current.Name
+        $pId = $w.Current.ProcessId
+        $p = Get-Process -Id $pId -ErrorAction SilentlyContinue
+        $pName = if ($p) { $p.ProcessName } else { "" }
+        if (($t -like "*${escaped}*") -or ($pName -like "*${escaped}*")) {
+          $hwnd = [IntPtr]$w.Current.NativeWindowHandle
+          if ($hwnd -ne [IntPtr]::Zero) {
+            Add-Type -MemberDefinition '
+              [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+              [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+              [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
+            ' -Name User32Bring -Namespace Win32 -ErrorAction SilentlyContinue
+            [Win32.User32Bring]::ShowWindow($hwnd, 9)
+            [Win32.User32Bring]::BringWindowToTop($hwnd)
+            [Win32.User32Bring]::SetForegroundWindow($hwnd)
+          }
+          $w.SetFocus()
+          Write-Output "SUCCESS"
+          $found = $true
+          break
+        }
+      } catch {}
+    }
+  } catch {}
+  if ($found) { break }
+
   Start-Sleep -Milliseconds 250
 }
 if (-not $found) { exit 1 }
@@ -445,6 +536,10 @@ $procs = Get-Process | Where-Object { $_.ProcessName -like "*${escaped}*" -or $_
 if ($procs) {
   foreach ($p in $procs) {
     $p.CloseMainWindow() | Out-Null
+    Start-Sleep -Milliseconds 200
+    if (-not $p.HasExited) {
+      Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+    }
   }
   Write-Output "CLOSED"
 } else {

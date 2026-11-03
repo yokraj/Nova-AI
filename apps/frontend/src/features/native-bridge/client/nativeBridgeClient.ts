@@ -2,7 +2,13 @@ import { NativeBridgeRequest } from '../types/nativeBridgeRequest';
 import { NativeBridgeResponse } from '../types/nativeBridgeResponse';
 
 export class NativeBridgeClient {
-  private bridgeUrl = 'http://127.0.0.1:3001/api/v1/native-execute';
+  private baseUrl: string;
+  private bridgeUrl: string;
+
+  constructor(baseUrl: string = 'http://127.0.0.1:3001') {
+    this.baseUrl = baseUrl.replace(/\/$/, '');
+    this.bridgeUrl = `${this.baseUrl}/api/v1/native-execute`;
+  }
 
   getCurrentOrigin(): string {
     if (typeof window !== 'undefined' && window.location && window.location.origin) {
@@ -13,7 +19,7 @@ export class NativeBridgeClient {
 
   async healthCheck(): Promise<{ healthy: boolean; service?: string }> {
     try {
-      const res = await fetch('http://127.0.0.1:3001/health', {
+      const res = await fetch(`${this.baseUrl}/health`, {
         method: 'GET',
       });
       if (res.ok) {

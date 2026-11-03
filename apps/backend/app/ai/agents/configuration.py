@@ -12,6 +12,12 @@ class WorkforceRegistryConfig(BaseModel):
     registered_agents_count: int = Field(68)
 
 
+class WorkforceManagerConfig(BaseModel):
+    """Workforce manager configuration settings."""
+
+    heartbeat_interval: float = Field(10.0)
+
+
 class WorkforceConfiguration(BaseModel):
     """System-wide configuration settings for Nova AI Workforce."""
 
@@ -41,6 +47,10 @@ class WorkforceConfiguration(BaseModel):
     @property
     def registry(self) -> WorkforceRegistryConfig:
         return WorkforceRegistryConfig(maximum_agents=100)
+
+    @property
+    def manager(self) -> WorkforceManagerConfig:
+        return WorkforceManagerConfig(heartbeat_interval=10.0)
 
 
 MultiAgentFoundationConfiguration = WorkforceConfiguration

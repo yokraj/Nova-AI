@@ -85,6 +85,11 @@ router.include_router(audit_router)
 from app.api.routers.health import router as health_router
 router.include_router(health_router)
 
+# Mount local voice STT endpoints
+from app.api.v1.voice_router import router as voice_router
+router.include_router(voice_router)
+
+
 
 
 

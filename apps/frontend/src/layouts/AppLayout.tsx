@@ -11,7 +11,7 @@ export const AppLayout: React.FC = () => {
   const [rightPanelOpen, setRightPanelOpen] = useState<boolean>(false);
 
   return (
-    <div className="min-h-screen max-h-screen w-full flex flex-col bg-black text-slate-100 overflow-hidden font-sans">
+    <div className="min-h-screen max-h-screen w-full flex flex-col bg-[#02040a] text-slate-100 overflow-hidden font-sans">
       {/* Top Navigation Header */}
       <TopNavigation
         onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
@@ -19,7 +19,7 @@ export const AppLayout: React.FC = () => {
       />
 
       {/* Center Layout Workspace */}
-      <div className="flex-1 flex min-w-0 overflow-hidden relative bg-black">
+      <div className="flex-1 flex min-w-0 overflow-hidden relative bg-[#02040a]">
         {/* Left Sidebar (Desktop & Mobile Drawer) */}
         <Sidebar
           collapsed={sidebarCollapsed}

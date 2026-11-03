@@ -1,63 +1,38 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  Sparkles,
-  LayoutDashboard,
-  Bot,
-  Target,
-  Monitor,
-  Brain,
-  BookOpen,
-} from 'lucide-react';
-import { cn } from '@/utils/cn';
-import NovaCore from '@/features/nova-core/components/NovaCore';
-import NovaStatus from '@/features/nova-core/components/NovaStatus';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useDashboardData } from '@/hooks/useDashboardData';
 import { useUniversalCommand } from '@/features/universal-command/hooks/useUniversalCommand';
+import { useNovaVoiceAssistant } from '@/features/voice/hooks/useNovaVoiceAssistant';
+import { NovaCoreState } from '@/features/nova-core/types/novaCore';
+import { CommandVisualState } from '@/types/dashboard';
+
+// JARVIS-Inspired Core Components
+import JarvisHolographicCore from '@/features/nova-core/components/JarvisHolographicCore';
+import IntelligenceCapabilities from '@/features/nova-core/components/IntelligenceCapabilities';
+import JarvisFloatingCommandBar from '@/features/universal-command/components/JarvisFloatingCommandBar';
+import JarvisRightContextPanels from '@/components/dashboard/JarvisRightContextPanels';
+import JarvisBottomQuickActions from '@/components/dashboard/JarvisBottomQuickActions';
+import CommandContextDrawer from '@/features/universal-command/components/CommandContextDrawer';
+
+// Execution Pipeline Views for active in-flight multi-step operations
+import ExecutionProgress from '@/features/universal-command/components/ExecutionProgress';
 import CommandUnderstanding from '@/features/universal-command/components/CommandUnderstanding';
 import CommandPlanView from '@/features/universal-command/components/CommandPlan';
 import PermissionPreview from '@/features/universal-command/components/PermissionPreview';
-import ExecutionProgress from '@/features/universal-command/components/ExecutionProgress';
 import ExecutionResult from '@/features/universal-command/components/ExecutionResult';
-import CommandContextDrawer from '@/features/universal-command/components/CommandContextDrawer';
-import { NovaCoreState } from '@/features/nova-core/types/novaCore';
-
-// The 14 Polished Dashboard Components
-import NovaHeader from '@/components/dashboard/NovaHeader';
-import UniversalCommandArea from '@/components/dashboard/UniversalCommandArea';
-import NovaIntelligenceCore from '@/components/dashboard/NovaIntelligenceCore';
-import SystemOverviewWidget from '@/components/dashboard/SystemOverviewWidget';
-import NovaCoreServicesWidget from '@/components/dashboard/NovaCoreServicesWidget';
-import ActiveAgentsWidget from '@/components/dashboard/ActiveAgentsWidget';
-import RunningMissionsWidget from '@/components/dashboard/RunningMissionsWidget';
-import MemoryActivityWidget from '@/components/dashboard/MemoryActivityWidget';
-import DeviceCenterWidget from '@/components/dashboard/DeviceCenterWidget';
-import AutomationCenterWidget from '@/components/dashboard/AutomationCenterWidget';
-import QuickActionsWidget from '@/components/dashboard/QuickActionsWidget';
-import ActivityTimelineWidget from '@/components/dashboard/ActivityTimelineWidget';
-import DashboardAnalyticsWidget from '@/components/dashboard/DashboardAnalyticsWidget';
-import NotificationsWidget from '@/components/dashboard/NotificationsWidget';
-import { CommandVisualState } from '@/types/dashboard';
-
-import { useDashboardData } from '@/hooks/useDashboardData';
 
 export const DashboardPage: React.FC = () => {
-  const [viewMode, setViewMode] = useState<'overview' | 'core'>('overview');
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const [rightPanelsOpen, setRightPanelsOpen] = useState(true);
 
+  // Live real data hooks
   const {
     data: dashboardData,
-    isLoading: isDashboardLoading,
-    isRefreshing: isDashboardRefreshing,
     connectionStatus,
     refresh: refreshDashboard,
-    pauseMission,
-    resumeMission,
-    cancelMission,
-    approveMission,
-    executeAutomation,
-    cancelAutomation,
-    markNotificationRead,
-    deleteNotification,
-    pingDevice,
   } = useDashboardData();
 
   const {
@@ -72,18 +47,44 @@ export const DashboardPage: React.FC = () => {
     closeDrawer,
   } = useUniversalCommand();
 
+  // Real voice interaction assistant (SpeechSynthesis + SpeechRecognition)
+  const voiceAssistant = useNovaVoiceAssistant({
+    onExecuteCommand: async (cmdText) => {
+      return await processCommand(cmdText, 'VOICE');
+    },
+    userName: user?.name || 'sir',
+  });
+
+  // Map execution and voice state to central holographic core state
   const getCoreState = (): NovaCoreState => {
+    // 1. Voice interaction states take visual precedence on the core
+    if (voiceAssistant.voiceState !== 'IDLE') {
+      return voiceAssistant.voiceState;
+    }
+
+    // 2. Command execution states
     if (!currentCommand) return 'IDLE';
-    if (currentCommand.executionState === 'AWAITING_APPROVAL') return 'AWAITING_APPROVAL';
-    if (currentCommand.executionState === 'COMPLETED') return 'COMPLETED';
-    if (currentCommand.executionState === 'FAILED') return 'FAILED';
-    if (currentCommand.executionState === 'EXECUTING' || currentCommand.executionState === 'VERIFYING') return 'EXECUTING';
-    if (currentCommand.executionState === 'PLANNING') return 'PLANNING';
-    if (currentCommand.executionState === 'UNDERSTANDING') return 'THINKING';
-    return 'IDLE';
+    switch (currentCommand.executionState) {
+      case 'UNDERSTANDING':
+        return 'THINKING';
+      case 'PLANNING':
+        return 'PLANNING';
+      case 'AWAITING_APPROVAL':
+        return 'AWAITING_APPROVAL';
+      case 'EXECUTING':
+      case 'VERIFYING':
+        return 'EXECUTING';
+      case 'COMPLETED':
+        return 'COMPLETED';
+      case 'FAILED':
+        return 'FAILED';
+      default:
+        return 'IDLE';
+    }
   };
 
   const mapToVisualState = (): CommandVisualState => {
+    if (voiceAssistant.isListening) return 'listening';
     if (!currentCommand) return 'idle';
     switch (currentCommand.executionState) {
       case 'UNDERSTANDING':
@@ -103,60 +104,77 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  // Handle Intelligence Capability clicks
+  const handleSelectCapability = (cap: 'think' | 'see' | 'do' | 'control') => {
+    switch (cap) {
+      case 'think':
+        navigate('/chat');
+        break;
+      case 'see':
+        navigate('/knowledge');
+        break;
+      case 'do':
+        navigate('/automation');
+        break;
+      case 'control':
+        navigate('/computer-control');
+        break;
+    }
+  };
+
+  // Handle Bottom Quick Actions
+  const handleQuickAction = (actionType: 'open_app' | 'run_task' | 'automate' | 'create', defaultPrompt: string) => {
+    switch (actionType) {
+      case 'open_app':
+        processCommand(defaultPrompt, 'TEXT');
+        break;
+      case 'run_task':
+        processCommand(defaultPrompt, 'TEXT');
+        break;
+      case 'automate':
+        navigate('/automation');
+        break;
+      case 'create':
+        processCommand(defaultPrompt, 'TEXT');
+        break;
+    }
+  };
+
   return (
-    <div className="w-full max-w-7xl mx-auto min-w-0 min-h-screen flex flex-col py-4 px-3 sm:px-6 space-y-6 select-none font-sans text-slate-100">
-      {/* Top View Switcher Header Bar */}
-      <div className="w-full flex items-center justify-between pb-1 border-b border-zinc-800/80">
-        <div className="flex items-center space-x-2">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-          <span className="text-[11px] font-mono font-bold text-cyan-300 tracking-wider uppercase">
-            NOVA CORE • UNIVERSAL COMMAND CENTER
-          </span>
-        </div>
-
-        {/* View Mode Segmented Control */}
-        <div className="flex items-center space-x-1 bg-slate-900/90 p-1 rounded-xl border border-slate-800 text-xs font-mono">
-          <button
-            onClick={() => setViewMode('overview')}
-            className={cn(
-              'px-3 py-1 rounded-lg flex items-center space-x-1.5 transition-all cursor-pointer',
-              viewMode === 'overview'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            )}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>Dashboard Overview</span>
-          </button>
-
-          <button
-            onClick={() => setViewMode('core')}
-            className={cn(
-              'px-3 py-1 rounded-lg flex items-center space-x-1.5 transition-all cursor-pointer',
-              viewMode === 'core'
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            )}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Core Focus Mode</span>
-          </button>
-        </div>
-      </div>
-
-      {/* VIEW MODE 1: FULL DASHBOARD OVERVIEW */}
-      {viewMode === 'overview' && (
-        <div className="space-y-6">
-          {/* 1. Nova Header Widget */}
-          <NovaHeader
-            isConnected={connectionStatus === 'connected'}
-            onRefresh={refreshDashboard}
-            isRefreshing={isDashboardRefreshing}
+    <div className="w-full min-h-full max-w-[1920px] mx-auto flex min-w-0 jarvis-bg-grid relative overflow-x-hidden px-3 sm:px-6 py-2 sm:py-3 lg:py-4">
+      {/* Central Command Stage */}
+      <div className="flex-1 flex flex-col items-center justify-center min-w-0 max-w-5xl mx-auto space-y-2.5 sm:space-y-3.5 z-10">
+        {/* 1. Central Holographic Core & Greeting */}
+        <div className="w-full flex flex-col items-center justify-center pt-0.5 sm:pt-1">
+          <JarvisHolographicCore
+            state={getCoreState()}
+            userName={user?.name || 'Commander'}
+            onClick={() => {
+              if (voiceAssistant.isSpeaking) {
+                voiceAssistant.stopSpeaking();
+              } else {
+                voiceAssistant.speakGreeting();
+              }
+            }}
           />
+        </div>
 
-          {/* 2. Universal Command Area */}
-          <UniversalCommandArea
+        {/* 2. Four Surrounding Compact Intelligence Capabilities (THINK, SEE, DO, CONTROL) */}
+        <div className="w-full max-w-4xl px-2">
+          <IntelligenceCapabilities onSelectCapability={handleSelectCapability} />
+        </div>
+
+        {/* 3. Universal Floating Command Interface */}
+        <div className="w-full max-w-3xl px-2">
+          <JarvisFloatingCommandBar
             state={mapToVisualState()}
+            isListeningProp={voiceAssistant.isListening}
+            isSpeakingProp={voiceAssistant.isSpeaking}
+            onToggleVoice={voiceAssistant.toggleVoice}
+            onStopSpeaking={voiceAssistant.stopSpeaking}
+            voiceError={voiceAssistant.voiceError}
+            onClearVoiceError={voiceAssistant.clearVoiceError}
+            externalTranscript={voiceAssistant.transcript}
             onExecuteCommand={(cmd, mode, attachments) =>
               processCommand(
                 cmd,
@@ -166,7 +184,11 @@ export const DashboardPage: React.FC = () => {
             }
             onApprovePermission={approveCurrentCommand}
             onRejectPermission={rejectCurrentCommand}
-            onCancel={cancelCommand}
+            onCancel={() => {
+              voiceAssistant.stopListening();
+              voiceAssistant.stopSpeaking();
+              cancelCommand();
+            }}
             permissionDetails={
               currentCommand?.permission
                 ? {
@@ -186,220 +208,63 @@ export const DashboardPage: React.FC = () => {
                 : undefined
             }
           />
-
-          {/* Dynamic Execution Pipeline View (If active command in flight) */}
-          <AnimatePresence>
-            {currentCommand && currentCommand.executionState !== 'IDLE' && (
-              <motion.div
-                initial={{ opacity: 0, y: 8, height: 0 }}
-                animate={{ opacity: 1, y: 0, height: 'auto' }}
-                exit={{ opacity: 0, y: -8, height: 0 }}
-                className="w-full space-y-3"
-              >
-                <ExecutionProgress state={currentCommand.executionState} />
-
-                {currentCommand.executionState === 'UNDERSTANDING' && (
-                  <CommandUnderstanding command={currentCommand} />
-                )}
-
-                {currentCommand.plan && currentCommand.executionState === 'PLANNING' && (
-                  <CommandPlanView plan={currentCommand.plan} />
-                )}
-
-                {currentCommand.permission && currentCommand.executionState === 'AWAITING_APPROVAL' && (
-                  <PermissionPreview
-                    permission={currentCommand.permission}
-                    onApprove={approveCurrentCommand}
-                  />
-                )}
-
-                {currentCommand.result && (
-                  <ExecutionResult
-                    result={currentCommand.result}
-                    onOpenContextDrawer={openDrawer}
-                  />
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* 3. Nova Intelligence Core Subsystem Widget */}
-          <NovaIntelligenceCore
-            onNavigateSubsystem={(subsystemId) => openDrawer(subsystemId)}
-          />
-
-          {/* 4. Telemetry Hardware & Core Microservices */}
-          <div className="space-y-6">
-            <SystemOverviewWidget
-              telemetry={dashboardData?.telemetry}
-              onRefresh={refreshDashboard}
-              isLoading={isDashboardLoading || isDashboardRefreshing}
-            />
-            <NovaCoreServicesWidget
-              services={dashboardData?.services}
-              onRestartService={refreshDashboard}
-            />
-          </div>
-
-          {/* 5. Telemetry Analytics & Workload Distribution */}
-          <DashboardAnalyticsWidget data={dashboardData?.analytics} />
-
-          {/* 6. Active Agent Workforce & Autonomous Missions DAG */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <ActiveAgentsWidget agents={dashboardData?.agents} />
-            <RunningMissionsWidget
-              missions={dashboardData?.missions}
-              onPauseMission={pauseMission}
-              onResumeMission={resumeMission}
-              onCancelMission={cancelMission}
-              onApproveMission={approveMission}
-            />
-          </div>
-
-          {/* 7. Memory Activity & Device Mesh Center */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <MemoryActivityWidget />
-            <DeviceCenterWidget
-              devices={dashboardData?.devices}
-              onPingDevice={pingDevice}
-            />
-          </div>
-
-          {/* 8. Automation Studio & Quick System Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <AutomationCenterWidget
-              automations={dashboardData?.automations}
-              onTriggerAutomation={executeAutomation}
-              onCancelAutomation={cancelAutomation}
-            />
-            <QuickActionsWidget onSelectAction={(cmd) => processCommand(cmd, 'TEXT')} />
-          </div>
-
-          {/* 9. Activity Timeline Stream & System Notifications */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <ActivityTimelineWidget activities={dashboardData?.timeline} />
-            <NotificationsWidget
-              initialNotifications={dashboardData?.notifications}
-              onMarkRead={markNotificationRead}
-              onDeleteNotification={deleteNotification}
-            />
-          </div>
         </div>
-      )}
 
-      {/* VIEW MODE 2: MINIMALIST NOVA CORE ORB FOCUS */}
-      {viewMode === 'core' && (
-        <div className="w-full max-w-4xl mx-auto flex flex-col items-center justify-between py-6 px-2 relative min-h-[75vh]">
-          {/* Dominant Nova Core Orb */}
-          <div className="flex flex-col items-center justify-center space-y-4 my-6 z-10 max-w-xl text-center w-full">
-            <NovaCore
-              state={getCoreState()}
-              onClick={() => processCommand('What can Nova do?', 'TEXT')}
-            />
+        {/* 4. Active In-Flight Multi-Step Execution Pipeline (When active task in progress) */}
+        <AnimatePresence>
+          {currentCommand && currentCommand.executionState !== 'IDLE' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: -10, height: 0 }}
+              className="w-full max-w-3xl px-2 space-y-3"
+            >
+              <ExecutionProgress state={currentCommand.executionState} />
 
-            <NovaStatus
-              state={getCoreState()}
-              customText={currentCommand?.executionState ? `Executing: ${currentCommand.rawInput}` : undefined}
-            />
-          </div>
+              {currentCommand.executionState === 'UNDERSTANDING' && (
+                <CommandUnderstanding command={currentCommand} />
+              )}
 
-          {/* Dynamic Execution Pipeline Display */}
-          <AnimatePresence mode="wait">
-            {currentCommand && currentCommand.executionState !== 'IDLE' && (
-              <motion.div
-                initial={{ opacity: 0, y: 8, height: 0 }}
-                animate={{ opacity: 1, y: 0, height: 'auto' }}
-                exit={{ opacity: 0, y: -8, height: 0 }}
-                className="w-full max-w-2xl z-10 space-y-3 my-2"
-              >
-                <ExecutionProgress state={currentCommand.executionState} />
+              {currentCommand.plan && currentCommand.executionState === 'PLANNING' && (
+                <CommandPlanView plan={currentCommand.plan} />
+              )}
 
-                {currentCommand.executionState === 'UNDERSTANDING' && (
-                  <CommandUnderstanding command={currentCommand} />
-                )}
+              {currentCommand.permission && currentCommand.executionState === 'AWAITING_APPROVAL' && (
+                <PermissionPreview
+                  permission={currentCommand.permission}
+                  onApprove={approveCurrentCommand}
+                />
+              )}
 
-                {currentCommand.plan && currentCommand.executionState === 'PLANNING' && (
-                  <CommandPlanView plan={currentCommand.plan} />
-                )}
+              {currentCommand.result && (
+                <ExecutionResult
+                  result={currentCommand.result}
+                  onOpenContextDrawer={openDrawer}
+                />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-                {currentCommand.permission && currentCommand.executionState === 'AWAITING_APPROVAL' && (
-                  <PermissionPreview
-                    permission={currentCommand.permission}
-                    onApprove={approveCurrentCommand}
-                  />
-                )}
-
-                {currentCommand.result && (
-                  <ExecutionResult
-                    result={currentCommand.result}
-                    onOpenContextDrawer={openDrawer}
-                  />
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Universal Command Area */}
-          <div className="w-full max-w-2xl z-10 space-y-3 pt-4">
-            <UniversalCommandArea
-              state={mapToVisualState()}
-              onExecuteCommand={(cmd, mode, attachments) =>
-                processCommand(
-                  cmd,
-                  mode === 'voice' ? 'VOICE' : mode === 'vision' ? 'VISION' : 'TEXT',
-                  attachments
-                )
-              }
-              onApprovePermission={approveCurrentCommand}
-              onRejectPermission={rejectCurrentCommand}
-              onCancel={cancelCommand}
-              permissionDetails={
-                currentCommand?.permission
-                  ? {
-                      action: currentCommand.permission.requiredCapability || currentCommand.permission.scope,
-                      resource: currentCommand.permission.scope || 'System Resources',
-                      riskLevel: currentCommand.permission.riskLevel,
-                    }
-                  : undefined
-              }
-              executionResult={
-                currentCommand?.result
-                  ? {
-                      success: currentCommand.result.success,
-                      message: currentCommand.result.message,
-                      details: currentCommand.result.errorReason || currentCommand.result.suggestedNextStep,
-                    }
-                  : undefined
-              }
-            />
-
-            {/* Subdued Contextual Trigger Chips */}
-            <div className="flex items-center justify-center flex-wrap gap-2 text-xs font-mono pt-2">
-              {[
-                { id: 'agents', label: 'Agents', icon: Bot },
-                { id: 'missions', label: 'Missions', icon: Target },
-                { id: 'devices', label: 'Devices', icon: Monitor },
-                { id: 'memory', label: 'Memory', icon: Brain },
-                { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
-              ].map((chip) => {
-                const ChipIcon = chip.icon;
-                return (
-                  <button
-                    key={chip.id}
-                    onClick={() => openDrawer(chip.id)}
-                    className="px-2.5 py-1 rounded-xl bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer flex items-center space-x-1.5 text-[11px]"
-                  >
-                    <ChipIcon className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>{chip.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        {/* 5. Bottom Quick Actions (Open App, Run Task, Automate, Create) */}
+        <div className="w-full max-w-3xl px-2">
+          <JarvisBottomQuickActions onActionClick={handleQuickAction} />
         </div>
-      )}
+      </div>
 
-      {/* Slide-Over Contextual Subsystem Drawer */}
+      {/* Right-Side Collapsible Context Panels (System Status, Active Agents, Live Activity) */}
+      <div className="hidden lg:flex ml-4 shrink-0 h-[calc(100vh-6.5rem)] sticky top-2">
+        <JarvisRightContextPanels
+          telemetry={dashboardData?.telemetry}
+          agents={dashboardData?.agents}
+          activities={dashboardData?.timeline}
+          isConnected={connectionStatus === 'connected'}
+          isCollapsed={!rightPanelsOpen}
+          onToggleCollapse={() => setRightPanelsOpen(!rightPanelsOpen)}
+        />
+      </div>
+
+      {/* Slide-Over Contextual Subsystem Drawer (Preserved for full detail inspection) */}
       <CommandContextDrawer
         isOpen={isDrawerOpen}
         domain={drawerDomain}

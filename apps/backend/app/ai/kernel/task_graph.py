@@ -19,7 +19,7 @@ from app.ai.desktop_automation.models import AutomationAction, AutomationResult,
 from app.ai.desktop_automation.security_engine import SecurityEngine
 from app.ai.desktop_automation.verification_engine import VerificationEngine
 from app.ai.desktop_automation.world_state import WorldStateEngine
-from app.ai.memory.working_memory import WorkingMemoryManager, WorkingMemoryTask
+from app.ai.memory.working_memory import WorkingMemoryManager, WorkingMemoryTask, TaskStatus
 
 logger = structlog.get_logger("task_graph")
 
@@ -598,7 +598,7 @@ class TaskGraphExecutor:
         elif succeeded_cnt == 0 and len(graph.nodes) > 0:
             final_status = TaskGraphStatus.FAILED
 
-        wm_task.task_status = "COMPLETED" if final_status == TaskGraphStatus.SUCCESS else "FAILED"
+        wm_task.task_status = TaskStatus.COMPLETED if final_status == TaskGraphStatus.SUCCESS else TaskStatus.FAILED
 
         return TaskGraphResult(
             graph_id=graph.graph_id,
@@ -679,6 +679,8 @@ class TaskGraphExecutor:
                     res_obj = AutomationResult(
                         action_id=action.action_id,
                         success=False,
+                        output=None,
+                        duration_sec=0.0,
                         error_message=f"Adapter {adapter.__class__.__name__} does not support execute_action",
                     )
 
@@ -690,6 +692,8 @@ class TaskGraphExecutor:
                 action_result = AutomationResult(
                     action_id=action.action_id,
                     success=False,
+                    output=None,
+                    duration_sec=0.0,
                     error_message=f"Adapter execution exception: {str(ex)}",
                 )
 

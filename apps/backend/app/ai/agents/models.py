@@ -1,11 +1,21 @@
 """Pydantic V2 data models and schemas for Universal Agent Workforce & Autonomous AI Company.
 """
 
-from enum import Enum
-from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from enum import Enum, EnumMeta
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
+from pydantic import BaseModel, Field, ConfigDict
 import time
 import uuid
+
+
+class AgentCapability(BaseModel):
+    """Specification of an agent capability."""
+    name: str
+    description: str = ""
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class AgentDivision(str, Enum):
@@ -22,7 +32,22 @@ class AgentDivision(str, Enum):
     SECURITY = "SECURITY"
 
 
-class AgentStatus(str, Enum):
+class AgentStatusRecord(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    health: str = "HEALTHY"
+    uptime_seconds: float = 0.0
+    active_tasks_count: int = 0
+    errors_count: int = 0
+
+
+class AgentStatusMeta(EnumMeta):
+    def __call__(cls, *args, **kwargs):
+        if kwargs:
+            return AgentStatusRecord(**kwargs)
+        return super().__call__(*args)
+
+
+class AgentStatus(str, Enum, metaclass=AgentStatusMeta):
     """Operational status of an AI agent."""
 
     IDLE = "IDLE"
@@ -58,12 +83,19 @@ class TaskStatus(str, Enum):
 class AgentBlueprint(BaseModel):
     """Blueprint specification for a specialized agent within a division."""
 
-    agent_id: str = Field(...)
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+    agent_id: str = Field(default="", alias="id")
     name: str = Field("Specialized Agent")
     division: AgentDivision = Field(AgentDivision.ENGINEERING)
     role_description: str = Field("Autonomous agent executing specialized domain tasks.")
     skills: List[str] = Field(default_factory=list)
+    tags: List[str] = Field(default_factory=list)
     status: AgentStatus = Field(AgentStatus.IDLE)
+
+    @property
+    def id(self) -> str:
+        return self.agent_id
 
 
 
@@ -166,14 +198,56 @@ class WorkforceHealth(BaseModel):
     telemetry: WorkforceTelemetry = Field(default_factory=WorkforceTelemetry)
 
 
+class AgentDescriptor(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    class_path: Optional[str] = None
+    dependencies: List[str] = Field(default_factory=list)
+
+
+class AgentRegistration(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    registration_id: str
+    descriptor: Any
+    metadata: Any
+
+
+class AgentResult(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    execution_id: str = Field(default="")
+    status: str = Field(default="success")
+    data: Optional[Any] = Field(default=None)
+    duration_ms: float = Field(default=0.0)
+    error_message: Optional[str] = Field(default=None)
+
+
+class AgentHeartbeat(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    agent_id: str
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    state: str = "READY"
+    uptime: float = 0.0
+    memory_usage_bytes: int = 0
+    execution_count: int = 0
+    active_task: Optional[str] = None
+
+
+class AgentState(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    value: str = "IDLE"
+    progress: float = 0.0
+    last_updated: datetime = Field(default_factory=datetime.utcnow)
+
+
+class AgentInfo(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    metadata: Any = None
+    state: Any = None
+    status: Any = None
+    active_task: Optional[str] = None
+
+
 AgentMetadata = AgentBlueprint
-AgentDescriptor = AgentBlueprint
-AgentRegistration = AgentBlueprint
-AgentCapability = str
 AgentContext = TaskNode
-AgentState = AgentStatus
-AgentInfo = AgentBlueprint
-AgentResult = TaskNode
 
 
 

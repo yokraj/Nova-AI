@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useVoiceState } from './useVoiceState';
 import { WebSpeechToTextEngine, WebTextToSpeechEngine } from '../services/webSpeechEngine';
-import { getMockVoiceResponse } from '../mock/mockVoiceEngine';
+import { executeRealStreamingResponse } from '@/features/conversation/services/realConversationEngine';
 import { DEFAULT_VOICE_SETTINGS, VoiceSettingsConfig } from '../types/voiceSettings';
 
 export function useVoiceInteraction(onSendToConversation?: (prompt: string) => void) {
@@ -43,33 +43,40 @@ export function useVoiceInteraction(onSendToConversation?: (prompt: string) => v
         // Pass to conversation thread & execution pipeline
         onSendToConversation?.(fullTranscript);
 
-        // Transition to Thinking
-        setTimeout(() => {
-          vState.setVoiceState('THINKING');
+        vState.setVoiceState('THINKING');
 
-          // Spoken response synthesis
-          setTimeout(() => {
-            const resp = getMockVoiceResponse(fullTranscript);
-            vState.setLastSpokenText(resp);
-
-            if (settings.autoPlayResponses && !isMuted) {
-              vState.setVoiceState('SPEAKING');
-              ttsEngineRef.current.speak(
-                resp,
-                (pct) => vState.setPlaybackProgress(pct),
-                () => {
-                  if (settings.continuousConversation && !isMuted) {
-                    startListeningSession();
-                  } else {
-                    vState.resetToIdle();
-                  }
-                }
-              );
-            } else {
-              vState.resetToIdle();
+        executeRealStreamingResponse(
+          fullTranscript,
+          (update) => {
+            if (update.streamingContent) {
+              vState.setLiveTranscript(update.streamingContent);
             }
-          }, 600);
-        }, 400);
+            if (update.isComplete) {
+              const resp =
+                update.blocks && update.blocks[0]?.content
+                  ? update.blocks[0].content
+                  : update.streamingContent || 'Execution verified.';
+              vState.setLastSpokenText(resp);
+
+              if (settings.autoPlayResponses && !isMuted) {
+                vState.setVoiceState('SPEAKING');
+                ttsEngineRef.current.speak(
+                  resp,
+                  (pct) => vState.setPlaybackProgress(pct),
+                  () => {
+                    if (settings.continuousConversation && !isMuted) {
+                      startListeningSession();
+                    } else {
+                      vState.resetToIdle();
+                    }
+                  }
+                );
+              } else {
+                vState.resetToIdle();
+              }
+            }
+          }
+        );
       }
     );
   }, [isMuted, onSendToConversation, settings.autoPlayResponses, settings.continuousConversation, vState]);

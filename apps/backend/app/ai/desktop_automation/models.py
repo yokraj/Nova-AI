@@ -167,10 +167,10 @@ class AutomationResult(BaseModel):
 
     execution_id: str = Field(default_factory=lambda: f"exec_{uuid.uuid4().hex[:8]}")
     action_id: str = Field(...)
-    success: bool = Field(True)
-    output: Any = Field(None)
-    error_message: Optional[str] = Field(None)
-    duration_sec: float = Field(0.0)
+    success: bool = Field(default=True)
+    output: Any = Field(default=None)
+    error_message: Optional[str] = Field(default=None)
+    duration_sec: float = Field(default=0.0)
     timestamp: float = Field(default_factory=time.time)
 
 

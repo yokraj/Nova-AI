@@ -18,8 +18,15 @@ Tests:
 15. Real WindowTracker observation integration
 """
 
+import sys
+from pathlib import Path
 import time
 import pytest
+
+# Ensure backend directory is in sys.path for direct execution and IDE language servers
+_backend_dir = Path(__file__).resolve().parent.parent
+if str(_backend_dir) not in sys.path:
+    sys.path.insert(0, str(_backend_dir))
 
 from app.ai.desktop_automation.models import AutomationAction
 from app.ai.desktop_automation.window_tracker import WindowTracker
@@ -328,3 +335,7 @@ class TestCognitiveTaskGraph:
         assert res.status == TaskGraphStatus.SUCCESS
         snapshot = WorldStateEngine.get_instance().refresh()
         assert snapshot.windows.foreground_window.source == ProvenanceSource.WINDOW_TRACKER
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

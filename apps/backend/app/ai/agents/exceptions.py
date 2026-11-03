@@ -39,7 +39,13 @@ class AgentExecutionError(AgentWorkforceError):
         super().__init__(f"Agent '{agent_id}' failed task '{task_id}': {reason}", "AGENT_EXECUTION_FAILED")
 
 
-AgentStateError = AgentExecutionError
+class AgentStateError(AgentWorkforceError):
+    """Raised when an illegal agent lifecycle state transition is requested."""
+
+    def __init__(self, message: str, error_code: str = "AGENT_STATE_ERROR") -> None:
+        super().__init__(message, error_code)
+
+
 AgentRegistrationError = AgentWorkforceError
 AgentPermissionsError = AgentWorkforceError
 AgentDependencyError = AgentWorkforceError

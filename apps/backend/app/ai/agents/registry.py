@@ -63,6 +63,10 @@ class AgentRegistry:
 
         return None
 
+    def get(self, identifier: str) -> Optional[AgentRegistration]:
+        """Lookup an agent registration by identifier or alias."""
+        return self.lookup(identifier)
+
     def list(self) -> List[AgentRegistration]:
         """Exposes raw registrations list."""
         return list(self._registrations.values())

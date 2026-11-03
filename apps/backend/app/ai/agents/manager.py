@@ -37,6 +37,11 @@ class UniversalAgentWorkforceManager:
         self.dashboard_runtime = WorkforceDashboardRuntime()
         self._all_agents: List[AgentBlueprint] = []
         self._register_all_divisions()
+        from app.ai.agents.registry import AgentRegistry
+        from app.ai.agents.heartbeat import HeartbeatMonitor
+        self._registry = AgentRegistry()
+        self.heartbeat = HeartbeatMonitor(self._registry)
+        self._active_instances: Dict[str, Any] = {}
 
     @property
     def event_bus(self) -> Any:
@@ -44,9 +49,40 @@ class UniversalAgentWorkforceManager:
 
     @property
     def registry(self) -> Any:
-        return self
+        return self._registry
 
-    def get_agent(self, agent_id: str) -> Optional[AgentBlueprint]:
+    async def start_agent(self, agent_id: str) -> Any:
+        """Instantiates and starts an agent by registration ID."""
+        if agent_id in self._active_instances:
+            inst = self._active_instances[agent_id]
+        else:
+            reg = self._registry.get(agent_id)
+            if not reg:
+                raise ValueError(f"Agent '{agent_id}' is not registered.")
+            import importlib
+            mod_name, cls_name = reg.descriptor.class_path.rsplit(".", 1)
+            cls = getattr(importlib.import_module(mod_name), cls_name)
+            inst = cls(metadata=reg.metadata)
+            self._active_instances[agent_id] = inst
+
+        await inst.initialize()
+        await inst.start()
+        return inst
+
+    async def stop_agent(self, agent_id: str) -> None:
+        """Stops an active agent."""
+        if agent_id in self._active_instances:
+            await self._active_instances[agent_id].stop()
+
+    async def shutdown(self) -> None:
+        """Gracefully shuts down all active agents."""
+        for inst in list(self._active_instances.values()):
+            await inst.shutdown()
+        self._active_instances.clear()
+
+    def get_agent(self, agent_id: str) -> Optional[Any]:
+        if agent_id in self._active_instances:
+            return self._active_instances[agent_id]
         for agent in self._all_agents:
             if agent.agent_id == agent_id:
                 return agent

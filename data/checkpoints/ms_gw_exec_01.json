@@ -1,5 +1,5 @@
 {
-  "checkpoint_id": "chk_20e1db8306",
+  "checkpoint_id": "chk_ca70e2f750",
   "mission_id": "ms_gw_exec_01",
   "goal": "Gateway mission test",
   "completed_step_ids": [
@@ -24,5 +24,5 @@
     }
   },
   "state": "paused",
-  "timestamp": "2026-10-09T01:53:19.340879"
+  "timestamp": "2026-11-02T15:26:31.095029"
 }

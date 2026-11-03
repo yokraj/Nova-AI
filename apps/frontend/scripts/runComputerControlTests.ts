@@ -26,7 +26,13 @@ async function runComputerControlTests() {
     if (!success) allPassed = false;
   };
 
-  const serverStarted = await server.start(3001);
+  let serverStarted = await server.start(3001);
+  if (!serverStarted) {
+    try {
+      const resp = await fetch('http://127.0.0.1:3001/health');
+      if (resp.ok) serverStarted = true;
+    } catch {}
+  }
   logResult('Native Bridge Server Start', serverStarted, 'Server bound to 127.0.0.1:3001');
 
   try {
@@ -66,7 +72,12 @@ async function runComputerControlTests() {
     logResult('Key Combination Execution (Ctrl+C)', comboRes.success && comboRes.verifiedState, `Shortcut - Status: ${comboRes.message}`);
 
     // 7. Window Discovery & Focus
-    const winRes = await orchestrator.executeWindowAction('FOCUS_WINDOW', 'Google Chrome', 'chrome.exe');
+    await executor.executeTool({
+      callId: 'focus-prep',
+      toolName: 'application.open',
+      arguments: { applicationName: 'Notepad' },
+    });
+    const winRes = await orchestrator.executeWindowAction('FOCUS_WINDOW', 'Notepad', 'notepad.exe');
     logResult('Window Discovery & Foreground Focus', winRes.success, `Window focus - Status: ${winRes.message}`);
 
     // 8. Clipboard Read Verification

@@ -42,11 +42,15 @@ class LocalSTTEngine(ISpeechRecognizer):
         )
 
     def is_available(self) -> bool:
-        """Checks if local STT environment and worker script are available."""
-        return os.path.exists(self.venv_python) and os.path.exists(self.worker_script)
+        """Checks if local STT environment or direct faster-whisper package is available."""
+        try:
+            import faster_whisper
+            return True
+        except ImportError:
+            return os.path.exists(self.venv_python) and os.path.exists(self.worker_script)
 
     async def transcribe(self, audio_bytes: bytes) -> SpeechResult:
-        """Transcribes incoming audio bytes using isolated local faster-whisper model.
+        """Transcribes incoming audio bytes using local faster-whisper model.
         
         Raises SpeechRecognitionError if audio input is empty, corrupted, or transcription fails.
         No fake success.
@@ -56,7 +60,7 @@ class LocalSTTEngine(ISpeechRecognizer):
 
         if not self.is_available():
             raise SpeechRecognitionError(
-                f"Isolated STT Python environment not found at '{self.venv_python}'."
+                f"Local STT engine not available and isolated STT environment not found at '{self.venv_python}'."
             )
 
         with tempfile.NamedTemporaryFile("wb", suffix=".wav", delete=False) as f:
@@ -64,6 +68,39 @@ class LocalSTTEngine(ISpeechRecognizer):
             temp_wav = f.name
 
         try:
+            # 1. Attempt direct faster-whisper execution first (fastest, zero-subprocess)
+            try:
+                import av
+                _orig_av_open = av.open
+                def _safe_av_open(*args, **kwargs):
+                    kwargs.pop("metadata_errors", None)
+                    return _orig_av_open(*args, **kwargs)
+                av.open = _safe_av_open
+
+                from faster_whisper import WhisperModel
+                import asyncio
+
+                def _run_whisper():
+                    model = WhisperModel(self.model_name, device="cpu", compute_type="int8")
+                    segments, info = model.transcribe(temp_wav, beam_size=5, vad_filter=True)
+                    text = " ".join([seg.text for seg in segments]).strip()
+                    conf = float(getattr(info, "language_probability", 0.95))
+                    lang = str(getattr(info, "language", "en"))
+                    return text, conf, lang
+
+                transcript, confidence, language = await asyncio.to_thread(_run_whisper)
+                if not transcript:
+                    raise SpeechRecognitionError("No speech transcribed from audio sample.")
+
+                return SpeechResult(
+                    transcript=transcript,
+                    confidence=confidence,
+                    language=language,
+                )
+            except ImportError:
+                pass
+
+            # 2. Fall back to isolated worker script if direct import was unavailable
             cmd = [
                 self.venv_python,
                 self.worker_script,

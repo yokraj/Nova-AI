@@ -42,8 +42,8 @@ export const useUniversalCommand = () => {
       rawInput: string,
       source: CommandSource = 'TEXT',
       attachments?: { files?: any[]; vision?: any }
-    ) => {
-      if (!rawInput.trim()) return;
+    ): Promise<UniversalCommand | null> => {
+      if (!rawInput.trim()) return null;
       setIsExecuting(true);
 
       // Step 1: Canonical Command Understanding & Plan Routing
@@ -86,7 +86,7 @@ export const useUniversalCommand = () => {
         };
         setCurrentCommand(awaitingCmd);
         setIsExecuting(false);
-        return;
+        return awaitingCmd;
       }
 
       // Step 2: Canonical Real AI Execution
@@ -122,7 +122,7 @@ export const useUniversalCommand = () => {
             setCurrentCommand(updatedCmd);
             setCommandHistory((prev) => [updatedCmd, ...prev]);
             setIsExecuting(false);
-            return;
+            return updatedCmd;
           }
         } catch (backendErr) {
           console.warn('Backend inference unavailable for universal command:', backendErr);
@@ -143,11 +143,13 @@ export const useUniversalCommand = () => {
         };
         setCurrentCommand(updatedCmd);
         setCommandHistory((prev) => [updatedCmd, ...prev]);
+        return updatedCmd;
       } catch {
         // Fallback execution engine if runtime throws
         const executed = await engine.executeCommand(cmd);
         setCurrentCommand(executed);
         setCommandHistory((prev) => [executed, ...prev]);
+        return executed;
       } finally {
         setIsExecuting(false);
       }

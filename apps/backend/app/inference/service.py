@@ -23,6 +23,7 @@ from app.inference.statistics import InferenceStatisticsTracker
 from app.intelligence.deterministic_tools import DeterministicCalculator
 from app.intelligence.response_validator import ResponseValidator
 from app.intelligence.document_resolver import DocumentContextResolver
+from app.intelligence.agent_execution_engine import AgentExecutionEngine, TaskIntent
 from app.inference.schemas import (
     ChatInferenceRequest,
     ChatInferenceResponse,
@@ -48,11 +49,77 @@ class InferenceService:
         self.calculator = DeterministicCalculator()
         self.response_validator = ResponseValidator()
         self.document_resolver = DocumentContextResolver()
+        self.agent_engine = AgentExecutionEngine()
         logger.info("inference_service_initialized")
 
     async def execute_chat(self, request: ChatInferenceRequest) -> ChatInferenceResponse:
         """Executes chat completion request through deterministic routing, GPU scheduling, and provider execution."""
         t0 = time.perf_counter()
+
+        # 0. Check Unified Agent Execution Engine for operational tasks and security checks
+        task_analysis = self.agent_engine.understand_task(request.prompt)
+        intent = task_analysis["intent"]
+
+        if intent in (
+            TaskIntent.SECURITY_VIOLATION,
+            TaskIntent.MULTI_STEP_TASK,
+            TaskIntent.DESKTOP_OPERATION,
+            TaskIntent.FILE_OPERATION,
+            TaskIntent.CODE_ANALYSIS,
+        ):
+            plan = self.agent_engine.create_plan(request.prompt, task_analysis)
+            report = await self.agent_engine.execute_plan(plan)
+            latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+            content = report.final_output
+            p_tokens = int(len(request.prompt.split()) * 1.3)
+            c_tokens = int(len(content.split()) * 1.3)
+
+            category_map = {
+                TaskIntent.SECURITY_VIOLATION: "Security",
+                TaskIntent.MULTI_STEP_TASK: "Multi-Step Automation",
+                TaskIntent.DESKTOP_OPERATION: "Desktop Automation",
+                TaskIntent.FILE_OPERATION: "File Operations",
+                TaskIntent.CODE_ANALYSIS: "Code Intelligence",
+            }
+            task_category = category_map.get(intent, "Agent Execution")
+
+            log_record = await self.repository.save_request_log(
+                prompt=request.prompt,
+                model_name="unified_agent_execution_engine",
+                provider="local_engine",
+                task_category=task_category,
+                prompt_tokens=p_tokens,
+                completion_tokens=c_tokens,
+                latency_ms=latency_ms,
+            )
+
+            self.stats_tracker.record_inference(
+                prompt_tokens=p_tokens,
+                completion_tokens=c_tokens,
+                ttft_ms=1.0,
+            )
+
+            return ChatInferenceResponse(
+                request_id=str(log_record.id),
+                content=content,
+                model="unified_agent_execution_engine",
+                provider="local_engine",
+                task_category=task_category,
+                prompt_tokens=p_tokens,
+                completion_tokens=c_tokens,
+                total_tokens=p_tokens + c_tokens,
+                latency_ms=latency_ms,
+                created_at=cast(Any, log_record.created_at),
+                is_deterministic=True,
+                verification={
+                    "valid": report.verified,
+                    "method": "unified_agent_physical_verification",
+                    "status": report.status,
+                    "steps_succeeded": report.steps_succeeded,
+                    "steps_total": report.steps_total,
+                    "verification_summary": report.verification_summary,
+                },
+            )
 
         # 1. Model Routing & Capability Detection
         route_res = self.model_router.route_request(
@@ -276,6 +343,7 @@ class StreamingService:
         self.calculator = DeterministicCalculator()
         self.model_router = ModelRouter()
         self.document_resolver = DocumentContextResolver()
+        self.agent_engine = AgentExecutionEngine()
         logger.info("streaming_service_initialized")
 
     async def stream_chat(
@@ -289,6 +357,26 @@ class StreamingService:
         use_deterministic_tools: bool = True,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Generates streaming tokens with deterministic shortcut for exact arithmetic and document grounding."""
+        # Check Unified Agent Execution Engine for operational tasks and security checks
+        task_analysis = self.agent_engine.understand_task(prompt)
+        intent = task_analysis["intent"]
+
+        if intent in (
+            TaskIntent.SECURITY_VIOLATION,
+            TaskIntent.MULTI_STEP_TASK,
+            TaskIntent.DESKTOP_OPERATION,
+            TaskIntent.FILE_OPERATION,
+            TaskIntent.CODE_ANALYSIS,
+        ):
+            plan = self.agent_engine.create_plan(prompt, task_analysis)
+            report = await self.agent_engine.execute_plan(plan)
+            lines = report.final_output.split("\n")
+            for idx, line in enumerate(lines):
+                yield {"token_index": idx, "text": line + "\n", "is_final": False}
+                await asyncio.sleep(0.01)
+            yield {"token_index": len(lines), "text": "", "is_final": True}
+            return
+
         # Check deterministic arithmetic shortcut
         if use_deterministic_tools:
             route_res = self.model_router.route_request(prompt)

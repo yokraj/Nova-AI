@@ -43,3 +43,102 @@
 .cyber-glow-box {
   box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
 }
+
+/* JARVIS Futuristic Holographic HUD Utilities */
+.jarvis-bg-grid {
+  background-color: #02040a;
+  background-image: 
+    radial-gradient(circle at 50% 30%, rgba(0, 240, 255, 0.08) 0%, transparent 65%),
+    linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 36px 36px, 36px 36px;
+}
+
+.jarvis-panel {
+  background: rgba(3, 7, 18, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 240, 255, 0.16);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 240, 255, 0.04);
+}
+
+.jarvis-panel-interactive {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.jarvis-panel-interactive:hover {
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 6px 35px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 240, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.jarvis-ring-cyan {
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.2), inset 0 0 15px rgba(0, 240, 255, 0.1);
+}
+
+.jarvis-glow-cyan {
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.65));
+}
+
+.jarvis-glow-amber {
+  filter: drop-shadow(0 0 10px rgba(255, 170, 0, 0.65));
+}
+
+.jarvis-text-cyan {
+  color: #00f0ff;
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+}
+
+.jarvis-text-amber {
+  color: #ffaa00;
+  text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+}
+
+/* Subtle holographic scanline animation */
+@keyframes jarvis-scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(1000%); }
+}
+
+.animate-scanline {
+  animation: jarvis-scanline 8s linear infinite;
+}
+
+/* Radar rotation */
+@keyframes jarvis-spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes jarvis-spin-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+.animate-spin-slow {
+  animation: jarvis-spin-slow 24s linear infinite;
+}
+
+.animate-spin-reverse {
+  animation: jarvis-spin-reverse 18s linear infinite;
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(2, 6, 17, 0.8);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.5);
+}

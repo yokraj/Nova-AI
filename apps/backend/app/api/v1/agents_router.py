@@ -22,6 +22,12 @@ class AgentCreateSchema(BaseModel):
     capabilities: List[str] = Field(default_factory=list)
 
 
+class AgentExecutionRequest(BaseModel):
+    goal: str
+    is_user_approved: bool = False
+    time_budget_sec: float = 60.0
+
+
 def format_agent(agent: AgentModel) -> dict:
     return {
         "id": str(agent.id),
@@ -77,3 +83,21 @@ async def get_agent(agent_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found.")
 
     return format_agent(agent)
+
+
+@router.post("/execute", response_model=dict)
+async def execute_agent_task(
+    payload: AgentExecutionRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Executes a natural language user goal using the Unified Agent Execution Engine."""
+    from app.intelligence.agent_execution_engine import AgentExecutionEngine
+    engine = AgentExecutionEngine()
+    analysis = engine.understand_task(payload.goal)
+    plan = engine.create_plan(payload.goal, analysis)
+    report = await engine.execute_plan(
+        plan,
+        time_budget_sec=payload.time_budget_sec,
+        is_user_approved=payload.is_user_approved,
+    )
+    return report.to_dict()

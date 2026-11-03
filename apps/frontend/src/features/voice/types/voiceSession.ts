@@ -12,13 +12,22 @@ export interface VoiceSession {
 }
 
 export interface SpeechToTextProvider {
-  startListening: (onTranscript?: (t: string) => void, onComplete?: (fullT: string) => void) => void;
+  startListening: (
+    onTranscript?: (t: string) => void,
+    onComplete?: (fullT: string) => void,
+    onError?: (err: string) => void
+  ) => void;
   stopListening: () => void;
   onTranscript?: (transcript: string) => void;
 }
 
 export interface TextToSpeechProvider {
-  speak: (text: string, onProgress: (pct: number) => void, onComplete: () => void) => void;
+  speak: (
+    text: string,
+    onProgress?: (pct: number) => void,
+    onComplete?: () => void,
+    onError?: (err: string) => void
+  ) => void;
   stop: () => void;
   pause: () => void;
   resume: () => void;

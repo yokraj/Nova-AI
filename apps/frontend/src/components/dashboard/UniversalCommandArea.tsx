@@ -72,7 +72,6 @@ export const UniversalCommandArea: React.FC<UniversalCommandAreaProps> = ({
   const [activeStepText, setActiveStepText] = useState<string>('Initializing plan...');
   const [stepProgress, setStepProgress] = useState<number>(0);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [isSimulatedVoice, setIsSimulatedVoice] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -93,27 +92,37 @@ export const UniversalCommandArea: React.FC<UniversalCommandAreaProps> = ({
     if (isListening) {
       if (onCancel) onCancel();
       setInternalState('idle');
-      setIsSimulatedVoice(false);
     } else {
       setInputMode('voice');
       setInternalState('listening');
-      setIsSimulatedVoice(true);
       setCommandText('');
+
+      if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+        try {
+          const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+          const rec = new SpeechRecognitionClass();
+          rec.continuous = false;
+          rec.interimResults = true;
+          rec.lang = 'en-US';
+          rec.onresult = (e: any) => {
+            const transcript = e.results[0][0].transcript;
+            if (transcript) {
+              setCommandText(transcript);
+              if (e.results[0].isFinal) {
+                setInternalState('processing');
+                handleCommandSubmit(transcript);
+              }
+            }
+          };
+          rec.onerror = () => setInternalState('idle');
+          rec.onend = () => setInternalState('idle');
+          rec.start();
+        } catch {
+          setInternalState('idle');
+        }
+      }
     }
   };
-
-  // Simulated speech recognition transcription if web speech unavailable
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (currentState === 'listening' && isSimulatedVoice) {
-      timer = setTimeout(() => {
-        setCommandText('Analyze project dependencies and verify build stability');
-        setInternalState('processing');
-        setIsSimulatedVoice(false);
-      }, 3500);
-    }
-    return () => clearTimeout(timer);
-  }, [currentState, isSimulatedVoice]);
 
   // Handle Command Submit
   const handleCommandSubmit = useCallback((overrideText?: string) => {

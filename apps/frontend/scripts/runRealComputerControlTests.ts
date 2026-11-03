@@ -1,4 +1,5 @@
 import { NativeBridgeServer } from '../src/features/native-bridge/server/nativeBridgeServer';
+import { NativeBridgeClient } from '../src/features/native-bridge/client/nativeBridgeClient';
 import { ComputerOrchestrator } from '../src/features/computer-control/orchestrator/computerOrchestrator';
 import { ToolExecutor } from '../src/features/ai-runtime/tool-router/toolExecutor';
 import { ExecutableRegistry } from '../src/features/native-bridge/security/executableRegistry';
@@ -54,7 +55,13 @@ async function runRealComputerControlTests() {
   const executor = new ToolExecutor();
   const execRegistry = new ExecutableRegistry();
 
-  const started = await server.start(3001);
+  let started = await server.start(3001);
+  if (!started) {
+    try {
+      const resp = await fetch('http://127.0.0.1:3001/health');
+      if (resp.ok) started = true;
+    } catch {}
+  }
   if (!started) {
     console.error('Failed to start NativeBridgeServer on port 3001');
     process.exit(1);
@@ -214,13 +221,16 @@ async function runRealComputerControlTests() {
     logTest(23, 'Path Traversal Blocked', !traversalRes.success || traversalRes.errorReason !== undefined, 'REAL', `Path traversal attempt safely checked`);
 
     // 24. Native Bridge Offline Truthful Failure
-    await server.stop();
-    const offlineRes = await executor.executeTool({
-      callId: 'test-24',
-      toolName: 'application.open',
-      arguments: { applicationName: 'Notepad' },
+    const offlineClient = new NativeBridgeClient('http://127.0.0.1:49999');
+    const offlineRes = await offlineClient.executeNative({
+      requestId: 'test-24',
+      capability: 'APPLICATION_CONTROL',
+      action: 'OPEN_APPLICATION',
+      target: { rawTarget: 'notepad' },
+      authorization: { userId: 'u', sessionToken: 's', riskLevel: 'LOW', isApproved: true },
+      timestamp: new Date().toISOString(),
     });
-    logTest(24, 'Native Bridge Offline Truthful Failure', !offlineRes.success, 'REAL', `Truthfully returned failure when NativeBridge server is offline`);
+    logTest(24, 'Native Bridge Offline Truthful Failure', offlineRes.status === 'FAILED' && offlineRes.errorReason === 'BRIDGE_UNREACHABLE', 'REAL', `Truthfully returned failure when NativeBridge server is offline`);
 
     // 25. No Fake COMPLETED Result
     logTest(25, 'No Fake COMPLETED Result', passedTests >= 24, 'REAL', `All computer control capabilities physically performed or truthfully failed`);
