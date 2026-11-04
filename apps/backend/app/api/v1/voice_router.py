@@ -677,30 +677,31 @@ async def generate_speech_audio(request: GenerateSpeechRequest):
 @router.post("/tts/preview")
 async def preview_speech_audio(request: PreviewSpeechRequest):
     """Generates actual speech preview using the requested provider, voice, and parameters."""
-    lang = request.language or "en-IN"
-    sample_text = request.text
-    if not sample_text or not sample_text.strip():
-        if lang.startswith("ta"):
-            sample_text = "வணக்கம், நான் நோவா. உங்களுக்கு எவ்வாறு உதவ முடியும்?"
-        elif lang.startswith("hi"):
-            sample_text = "नमस्ते, मैं नोவா हूँ। मैं आपकी क्या मदद कर सकती हूँ?"
-        else:
-            sample_text = "Good morning, sir. I am Nova. How may I assist you today?"
+    try:
+        lang = request.language or "en-IN"
+        sample_text = request.text
+        if not sample_text or not sample_text.strip():
+            if lang.startswith("ta"):
+                sample_text = "வணக்கம், நான் நோவா. உங்களுக்கு எவ்வாறு உதவ முடியும்?"
+            elif lang.startswith("hi"):
+                sample_text = "नमस्ते, मैं नोவா हूँ। मैं आपकी क्या मदद कर सकती हूँ?"
+            else:
+                sample_text = "Good morning, sir. I am Nova. How may I assist you today?"
 
-    is_offline = request.mode != "neural"
-    return await generate_speech_audio(
-        GenerateSpeechRequest(
-            text=sample_text,
-            language=lang,
-            voice=request.voice,
-            mode=request.mode,
-            pitch=request.pitch or 1.08,
-            rate=request.rate or 1.05,
-            volume=request.volume or 100.0,
-            offline_only=is_offline,
-            prefer_offline=is_offline,
+        is_offline = request.mode != "neural"
+        return await generate_speech_audio(
+            GenerateSpeechRequest(
+                text=sample_text,
+                language=lang,
+                voice=request.voice,
+                mode=request.mode,
+                pitch=request.pitch or 1.08,
+                rate=request.rate or 1.05,
+                volume=request.volume or 100.0,
+                offline_only=is_offline,
+                prefer_offline=is_offline,
+            )
         )
-    )
     except Exception as exc:
         logger.error("tts_generation_failed", error=str(exc))
         raise HTTPException(status_code=500, detail=f"TTS synthesis failed: {str(exc)}")
