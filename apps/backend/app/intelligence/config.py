@@ -17,6 +17,7 @@ class ModelProviderConfig(BaseModel):
     default_model: str = Field(default="llama3.2:latest", description="Default model tag or identifier")
     timeout_seconds: float = Field(default=60.0, description="Request timeout limit in seconds")
     is_local: bool = Field(default=True, description="True if local-first offline runtime")
+    is_enabled: bool = Field(default=True, description="Whether the provider is permitted under Zero-Cost Policy")
 
 
 class IntelligenceConfig(BaseModel):
@@ -42,13 +43,13 @@ class IntelligenceConfig(BaseModel):
     enable_reflection: bool = Field(default=True, description="Enables pre-response self-critique and improvement")
     max_reflection_loops: int = Field(default=2, description="Maximum internal reflection iterations")
     
-    # Provider Configurations Registry
+    # Provider Configurations Registry (Local Runtimes Active; Commercial APIs Disabled)
     providers: Dict[str, ModelProviderConfig] = Field(
         default_factory=lambda: {
-            "ollama": ModelProviderConfig(provider_id="ollama", base_url="http://localhost:11434", default_model="llama3.2:latest", is_local=True),
-            "llama.cpp": ModelProviderConfig(provider_id="llama.cpp", base_url="http://localhost:8080", default_model="llama-3.2-8b", is_local=True),
-            "vllm": ModelProviderConfig(provider_id="vllm", base_url="http://localhost:8000", default_model="meta-llama/Llama-3.2-8B", is_local=True),
-            "openai": ModelProviderConfig(provider_id="openai", base_url="https://api.openai.com/v1", default_model="gpt-4o", is_local=False),
-            "anthropic": ModelProviderConfig(provider_id="anthropic", base_url="https://api.anthropic.com/v1", default_model="claude-3-5-sonnet-20241022", is_local=False),
+            "ollama": ModelProviderConfig(provider_id="ollama", base_url="http://localhost:11434", default_model="llama3.2:latest", is_local=True, is_enabled=True),
+            "llama.cpp": ModelProviderConfig(provider_id="llama.cpp", base_url="http://localhost:8080", default_model="llama-3.2-8b", is_local=True, is_enabled=True),
+            "vllm": ModelProviderConfig(provider_id="vllm", base_url="http://localhost:8000", default_model="meta-llama/Llama-3.2-8B", is_local=True, is_enabled=False),
+            "openai": ModelProviderConfig(provider_id="openai", base_url="", default_model="disabled", is_local=False, is_enabled=False),
+            "anthropic": ModelProviderConfig(provider_id="anthropic", base_url="", default_model="disabled", is_local=False, is_enabled=False),
         }
     )

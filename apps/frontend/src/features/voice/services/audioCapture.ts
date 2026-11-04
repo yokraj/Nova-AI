@@ -1,11 +1,14 @@
 /**
  * Real Microphone Audio Capture Service.
  * Manages getUserMedia stream lifecycle, MediaRecorder audio chunking,
- * and tracks release to prevent persistent microphone locks.
+ * continuous stream reuse for VAD, mute controls, and hardware track release.
  */
 
 export class MicrophoneError extends Error {
-  constructor(message: string, public code: 'PERMISSION_DENIED' | 'NOT_FOUND' | 'UNSUPPORTED' | 'RECORDING_ERROR') {
+  constructor(
+    message: string,
+    public code: 'PERMISSION_DENIED' | 'NOT_FOUND' | 'UNSUPPORTED' | 'RECORDING_ERROR'
+  ) {
     super(message);
     this.name = 'MicrophoneError';
   }
@@ -16,6 +19,7 @@ export class AudioCaptureService {
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   private isRecordingActive = false;
+  private isMutedState = false;
 
   isSupported(): boolean {
     return (
@@ -26,7 +30,11 @@ export class AudioCaptureService {
     );
   }
 
-  async start(): Promise<void> {
+  /**
+   * Acquires the hardware audio MediaStream once.
+   * If a stream is already active and healthy, returns it immediately to prevent duplicate streams.
+   */
+  async acquireContinuousStream(): Promise<MediaStream> {
     if (!this.isSupported()) {
       throw new MicrophoneError(
         'Audio recording is not supported in this browser environment.',
@@ -34,8 +42,12 @@ export class AudioCaptureService {
       );
     }
 
-    // Stop any existing stream
-    this.cancel();
+    if (this.mediaStream && this.mediaStream.active) {
+      const activeTracks = this.mediaStream.getAudioTracks().filter((t) => t.readyState === 'live');
+      if (activeTracks.length > 0) {
+        return this.mediaStream;
+      }
+    }
 
     try {
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -47,6 +59,8 @@ export class AudioCaptureService {
           autoGainControl: true,
         },
       });
+      this.isMutedState = false;
+      return this.mediaStream;
     } catch (err: any) {
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         throw new MicrophoneError(
@@ -65,8 +79,27 @@ export class AudioCaptureService {
         'RECORDING_ERROR'
       );
     }
+  }
 
-    // Determine optimal supported audio mimeType
+  getStream(): MediaStream | null {
+    if (this.mediaStream && this.mediaStream.active) {
+      return this.mediaStream;
+    }
+    return null;
+  }
+
+  /**
+   * Starts capturing an utterance recording on the continuous stream.
+   */
+  async startRecordingSlice(): Promise<void> {
+    const stream = await this.acquireContinuousStream();
+
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      try {
+        this.mediaRecorder.stop();
+      } catch {}
+    }
+
     let mimeType = 'audio/webm';
     if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
       mimeType = 'audio/webm;codecs=opus';
@@ -78,17 +111,17 @@ export class AudioCaptureService {
 
     this.recordedChunks = [];
     try {
-      this.mediaRecorder = new MediaRecorder(this.mediaStream, { mimeType });
+      this.mediaRecorder = new MediaRecorder(stream, { mimeType });
       this.mediaRecorder.ondataavailable = (event: BlobEvent) => {
         if (event.data && event.data.size > 0) {
           this.recordedChunks.push(event.data);
         }
       };
 
-      this.mediaRecorder.start(100); // 100ms time slice for streaming chunks
+      this.mediaRecorder.start(100);
       this.isRecordingActive = true;
     } catch (err: any) {
-      this.cancel();
+      this.isRecordingActive = false;
       throw new MicrophoneError(
         `Failed to start MediaRecorder: ${err.message}`,
         'RECORDING_ERROR'
@@ -96,22 +129,28 @@ export class AudioCaptureService {
     }
   }
 
-  async stop(): Promise<Blob | null> {
+  /**
+   * Stops capturing an utterance and returns the audio Blob without stopping the underlying MediaStream.
+   */
+  async stopRecordingSlice(): Promise<Blob | null> {
     if (!this.mediaRecorder || !this.isRecordingActive) {
-      this.cancel();
+      this.isRecordingActive = false;
       return null;
     }
 
     return new Promise<Blob | null>((resolve) => {
-      if (!this.mediaRecorder) {
+      const recorder = this.mediaRecorder;
+      if (!recorder) {
+        this.isRecordingActive = false;
         resolve(null);
         return;
       }
 
-      this.mediaRecorder.onstop = () => {
-        const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
+      recorder.onstop = () => {
+        this.isRecordingActive = false;
+        const mimeType = recorder.mimeType || 'audio/webm';
         const audioBlob = new Blob(this.recordedChunks, { type: mimeType });
-        this.releaseResources();
+        this.recordedChunks = [];
         if (audioBlob.size < 100) {
           resolve(null);
         } else {
@@ -120,26 +159,71 @@ export class AudioCaptureService {
       };
 
       try {
-        if (this.mediaRecorder.state !== 'inactive') {
-          this.mediaRecorder.stop();
+        if (recorder.state !== 'inactive') {
+          recorder.stop();
         } else {
-          this.releaseResources();
+          this.isRecordingActive = false;
           resolve(null);
         }
       } catch {
-        this.releaseResources();
+        this.isRecordingActive = false;
         resolve(null);
       }
     });
   }
 
+  /**
+   * Standard single-shot start (for push-to-talk mode).
+   */
+  async start(): Promise<void> {
+    await this.startRecordingSlice();
+  }
+
+  /**
+   * Standard single-shot stop (for push-to-talk mode). Releases stream.
+   */
+  async stop(): Promise<Blob | null> {
+    const blob = await this.stopRecordingSlice();
+    this.releaseResources();
+    return blob;
+  }
+
+  /**
+   * Mute microphone input without stopping the stream.
+   */
+  mute(): void {
+    if (this.mediaStream) {
+      this.mediaStream.getAudioTracks().forEach((track) => {
+        track.enabled = false;
+      });
+      this.isMutedState = true;
+    }
+  }
+
+  /**
+   * Unmute microphone input.
+   */
+  unmute(): void {
+    if (this.mediaStream) {
+      this.mediaStream.getAudioTracks().forEach((track) => {
+        track.enabled = true;
+      });
+      this.isMutedState = false;
+    }
+  }
+
+  isMuted(): boolean {
+    return this.isMutedState;
+  }
+
+  /**
+   * Completely cancel recording and release hardware microphone indicators.
+   */
   cancel(): void {
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       try {
         this.mediaRecorder.stop();
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
     this.releaseResources();
   }
@@ -148,14 +232,17 @@ export class AudioCaptureService {
     return this.isRecordingActive;
   }
 
-  private releaseResources(): void {
+  releaseResources(): void {
     this.isRecordingActive = false;
     if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach((track) => track.stop());
+      this.mediaStream.getTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch {}
+      });
       this.mediaStream = null;
     }
     this.mediaRecorder = null;
     this.recordedChunks = [];
   }
 }
-

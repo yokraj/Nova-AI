@@ -16,22 +16,32 @@ from app.ai.models.models import (
 
 
 class GeminiProvider(IModelProvider):
-    """Google Gemini remote API provider."""
+    """Google Gemini remote API provider (Disabled under Zero-Cost Policy)."""
 
     @property
     def provider_name(self) -> str:
         return "gemini"
 
     async def generate(self, request: GenerationRequest) -> GenerationResponse:
-        model_id = request.model_id or "gemini-1.5-pro"
-        text = f"[Gemini API - {model_id}] Output for prompt: {request.prompt[:100]}"
-        return GenerationResponse(text=text, model_id=model_id, token_usage=TokenUsage(total_tokens=40))
+        raise PermissionError(
+            "Commercial provider 'gemini' is disabled under Nova AI Zero-Cost Policy. "
+            "Please use local Ollama inference ('ollama') instead."
+        )
 
     async def embed(self, request: EmbeddingRequest) -> EmbeddingResponse:
-        return EmbeddingResponse(embeddings=[[0.02] * 768 for _ in request.text_list], dimensions=768)
+        raise PermissionError(
+            "Commercial provider 'gemini' embeddings are disabled under Nova AI Zero-Cost Policy. "
+            "Please use local embeddings ('nomic-embed-text' via Ollama) instead."
+        )
 
     async def process_audio(self, request: AudioRequest) -> AudioResponse:
-        return AudioResponse(transcript_or_audio_path="Gemini Audio API Output")
+        raise PermissionError(
+            "Commercial provider 'gemini' audio processing is disabled under Nova AI Zero-Cost Policy. "
+            "Please use local faster-whisper instead."
+        )
 
     async def process_vision(self, request: VisionRequest) -> VisionResponse:
-        return VisionResponse(description="Gemini Vision API Output")
+        raise PermissionError(
+            "Commercial provider 'gemini' vision is disabled under Nova AI Zero-Cost Policy. "
+            "Please use local vision models ('qwen2.5-vl' via Ollama) instead."
+        )

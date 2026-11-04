@@ -16,22 +16,32 @@ from app.ai.models.models import (
 
 
 class AnthropicProvider(IModelProvider):
-    """Anthropic Claude remote API provider."""
+    """Anthropic Claude remote API provider (Disabled under Zero-Cost Policy)."""
 
     @property
     def provider_name(self) -> str:
         return "anthropic"
 
     async def generate(self, request: GenerationRequest) -> GenerationResponse:
-        model_id = request.model_id or "claude-3-5-sonnet"
-        text = f"[Anthropic API - {model_id}] Output for prompt: {request.prompt[:100]}"
-        return GenerationResponse(text=text, model_id=model_id, token_usage=TokenUsage(total_tokens=50))
+        raise PermissionError(
+            "Commercial provider 'anthropic' is disabled under Nova AI Zero-Cost Policy. "
+            "Please use local Ollama inference ('ollama') instead."
+        )
 
     async def embed(self, request: EmbeddingRequest) -> EmbeddingResponse:
-        return EmbeddingResponse(embeddings=[[0.03] * 1024 for _ in request.text_list], dimensions=1024)
+        raise PermissionError(
+            "Commercial provider 'anthropic' embeddings are disabled under Nova AI Zero-Cost Policy. "
+            "Please use local embeddings ('nomic-embed-text' via Ollama) instead."
+        )
 
     async def process_audio(self, request: AudioRequest) -> AudioResponse:
-        return AudioResponse(transcript_or_audio_path="Anthropic Audio N/A")
+        raise PermissionError(
+            "Commercial provider 'anthropic' audio processing is disabled under Nova AI Zero-Cost Policy. "
+            "Please use local faster-whisper instead."
+        )
 
     async def process_vision(self, request: VisionRequest) -> VisionResponse:
-        return VisionResponse(description="Anthropic Vision API Output")
+        raise PermissionError(
+            "Commercial provider 'anthropic' vision is disabled under Nova AI Zero-Cost Policy. "
+            "Please use local vision models ('qwen2.5-vl' via Ollama) instead."
+        )

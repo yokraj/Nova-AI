@@ -2,11 +2,11 @@ import { useState, useRef, useCallback } from 'react';
 import { useVoiceState } from './useVoiceState';
 import { WebSpeechToTextEngine, WebTextToSpeechEngine } from '../services/webSpeechEngine';
 import { executeRealStreamingResponse } from '@/features/conversation/services/realConversationEngine';
-import { DEFAULT_VOICE_SETTINGS, VoiceSettingsConfig } from '../types/voiceSettings';
+import { DEFAULT_VOICE_SETTINGS, VoiceSettingsConfig, loadPersistedVoiceSettings } from '../types/voiceSettings';
 
 export function useVoiceInteraction(onSendToConversation?: (prompt: string) => void) {
   const vState = useVoiceState();
-  const [settings, setSettings] = useState<VoiceSettingsConfig>(DEFAULT_VOICE_SETTINGS);
+  const [settings, setSettings] = useState<VoiceSettingsConfig>(() => loadPersistedVoiceSettings());
   const [isMuted, setIsMuted] = useState(false);
   const [isPushToTalkActive, setIsPushToTalkActive] = useState(false);
 

@@ -12,8 +12,8 @@ from pydantic import BaseModel, Field
 class InferenceConfig(BaseModel):
     """Configuration settings for Enterprise Inference Gateway."""
 
-    # Default Local Provider & Model Selection
-    default_provider: str = Field(default="ollama", description="Default LLM provider (ollama, vllm, openai)")
+    # Default Local Provider & Model Selection (Enforced by Zero-Cost Policy)
+    default_provider: str = Field(default="ollama", description="Default LLM provider (ollama only)")
     default_model: str = Field(
         default_factory=lambda: os.getenv("AI_DEFAULT_MODEL", "qwen3:8b"),
         description="Default LLM model name",
@@ -22,13 +22,13 @@ class InferenceConfig(BaseModel):
         default_factory=lambda: os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434"),
         description="Ollama API base URL",
     )
-    vllm_base_url: str = Field(default="http://localhost:8000", description="vLLM API base URL")
-    openai_compatible_base_url: str = Field(default="http://localhost:1234/v1", description="OpenAI-compatible server URL")
+    vllm_base_url: str = Field(default="http://localhost:8000", description="vLLM API base URL (local only)")
+    openai_compatible_base_url: str = Field(default="http://localhost:1234/v1", description="OpenAI-compatible local server URL (e.g. LM Studio / vLLM)")
 
-    # Cloud Provider API Keys (Configurable via Environment)
-    openai_api_key: Optional[str] = Field(default=None, description="OpenAI API Key")
-    anthropic_api_key: Optional[str] = Field(default=None, description="Anthropic API Key")
-    gemini_api_key: Optional[str] = Field(default=None, description="Google Gemini API Key")
+    # Legacy Cloud Provider Fields (Disabled & Inactive under Zero-Cost Policy)
+    openai_api_key: Optional[str] = Field(default=None, description="Disabled under Zero-Cost Policy")
+    anthropic_api_key: Optional[str] = Field(default=None, description="Disabled under Zero-Cost Policy")
+    gemini_api_key: Optional[str] = Field(default=None, description="Disabled under Zero-Cost Policy")
 
     # GPU & Execution Settings
     max_gpu_allocation: int = Field(default=4, description="Maximum available GPUs for scheduling")

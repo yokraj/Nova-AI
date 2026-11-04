@@ -49,8 +49,9 @@ class LocalSTTEngine(ISpeechRecognizer):
         except ImportError:
             return os.path.exists(self.venv_python) and os.path.exists(self.worker_script)
 
-    async def transcribe(self, audio_bytes: bytes) -> SpeechResult:
+    async def transcribe(self, audio_bytes: bytes, language: Optional[str] = None) -> SpeechResult:
         """Transcribes incoming audio bytes using local faster-whisper model.
+        Supports multilingual transcription ('en', 'ta', 'hi', or auto).
         
         Raises SpeechRecognitionError if audio input is empty, corrupted, or transcription fails.
         No fake success.
@@ -67,6 +68,11 @@ class LocalSTTEngine(ISpeechRecognizer):
             f.write(audio_bytes)
             temp_wav = f.name
 
+        target_model = self.model_name
+        target_lang = language if language and language != "auto" else None
+        if target_lang in ["ta", "hi"] and target_model.endswith(".en"):
+            target_model = "tiny"
+
         try:
             # 1. Attempt direct faster-whisper execution first (fastest, zero-subprocess)
             try:
@@ -81,21 +87,21 @@ class LocalSTTEngine(ISpeechRecognizer):
                 import asyncio
 
                 def _run_whisper():
-                    model = WhisperModel(self.model_name, device="cpu", compute_type="int8")
-                    segments, info = model.transcribe(temp_wav, beam_size=5, vad_filter=True)
+                    model = WhisperModel(target_model, device="cpu", compute_type="int8")
+                    segments, info = model.transcribe(temp_wav, language=target_lang, beam_size=5, vad_filter=True)
                     text = " ".join([seg.text for seg in segments]).strip()
                     conf = float(getattr(info, "language_probability", 0.95))
-                    lang = str(getattr(info, "language", "en"))
+                    lang = str(getattr(info, "language", target_lang or "en"))
                     return text, conf, lang
 
-                transcript, confidence, language = await asyncio.to_thread(_run_whisper)
+                transcript, confidence, lang_code = await asyncio.to_thread(_run_whisper)
                 if not transcript:
                     raise SpeechRecognitionError("No speech transcribed from audio sample.")
 
                 return SpeechResult(
                     transcript=transcript,
                     confidence=confidence,
-                    language=language,
+                    language=lang_code,
                 )
             except ImportError:
                 pass
@@ -107,8 +113,10 @@ class LocalSTTEngine(ISpeechRecognizer):
                 "--audio",
                 temp_wav,
                 "--model",
-                self.model_name,
+                target_model,
             ]
+            if target_lang:
+                cmd.extend(["--language", target_lang])
             proc = subprocess.run(
                 cmd,
                 capture_output=True,

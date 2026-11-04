@@ -21,8 +21,31 @@ class ModelRegistry:
         logger.info("model_registry_initialized", registered_count=len(self._models))
 
     def _bootstrap_default_models(self) -> None:
-        """Registers default local and cloud AI models."""
+        """Registers default local and cloud AI models.
+        
+        Under Zero-Cost Policy, all commercial cloud models are strictly marked is_active=False.
+        """
         defaults = [
+            {
+                "model_name": "qwen3:8b",
+                "provider": "ollama",
+                "context_window": 32768,
+                "supports_vision": False,
+                "supports_function_calling": True,
+                "supports_streaming": True,
+                "vram_required_mb": 5120,
+                "is_active": True,
+            },
+            {
+                "model_name": "qwen2.5-coder",
+                "provider": "ollama",
+                "context_window": 32768,
+                "supports_vision": False,
+                "supports_function_calling": True,
+                "supports_streaming": True,
+                "vram_required_mb": 5120,
+                "is_active": True,
+            },
             {
                 "model_name": "llama3.2",
                 "provider": "ollama",
@@ -34,6 +57,26 @@ class ModelRegistry:
                 "is_active": True,
             },
             {
+                "model_name": "deepseek-r1-distill-qwen",
+                "provider": "ollama",
+                "context_window": 16384,
+                "supports_vision": False,
+                "supports_function_calling": True,
+                "supports_streaming": True,
+                "vram_required_mb": 5120,
+                "is_active": True,
+            },
+            {
+                "model_name": "qwen2.5-vl",
+                "provider": "ollama",
+                "context_window": 16384,
+                "supports_vision": True,
+                "supports_function_calling": True,
+                "supports_streaming": True,
+                "vram_required_mb": 5120,
+                "is_active": True,
+            },
+            {
                 "model_name": "llama3.1:70b",
                 "provider": "vllm",
                 "context_window": 131072,
@@ -41,7 +84,7 @@ class ModelRegistry:
                 "supports_function_calling": True,
                 "supports_streaming": True,
                 "vram_required_mb": 24576,
-                "is_active": True,
+                "is_active": False,
             },
             {
                 "model_name": "gpt-4o",
@@ -51,7 +94,7 @@ class ModelRegistry:
                 "supports_function_calling": True,
                 "supports_streaming": True,
                 "vram_required_mb": 0,
-                "is_active": True,
+                "is_active": False,  # Disabled under Zero-Cost Policy
             },
             {
                 "model_name": "claude-3-5-sonnet",
@@ -61,7 +104,7 @@ class ModelRegistry:
                 "supports_function_calling": True,
                 "supports_streaming": True,
                 "vram_required_mb": 0,
-                "is_active": True,
+                "is_active": False,  # Disabled under Zero-Cost Policy
             },
         ]
         for m in defaults:

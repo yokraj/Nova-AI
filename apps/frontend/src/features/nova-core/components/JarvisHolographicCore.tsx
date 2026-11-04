@@ -50,6 +50,22 @@ export const JarvisHolographicCore: React.FC<JarvisHolographicCoreProps> = ({
       label: 'SYSTEM ONLINE',
       subtext: 'Core standing by for instruction',
     },
+    SLEEPING: {
+      primary: '#00f0ff',
+      glow: 'rgba(0, 240, 255, 0.4)',
+      halo: 'shadow-[0_0_90px_rgba(0,240,255,0.3)]',
+      orbitSpeed: 30,
+      label: 'WAKE WORD STANDBY',
+      subtext: 'Listening for "Hey Nova"...',
+    },
+    INTERRUPTED: {
+      primary: '#f97316',
+      glow: 'rgba(249, 115, 22, 0.65)',
+      halo: 'shadow-[0_0_100px_rgba(249,115,22,0.5)]',
+      orbitSpeed: 10,
+      label: 'SPEECH HALTED',
+      subtext: 'Interrupted by operator',
+    },
     LISTENING: {
       primary: '#38bdf8',
       glow: 'rgba(56, 189, 248, 0.65)',
@@ -57,6 +73,14 @@ export const JarvisHolographicCore: React.FC<JarvisHolographicCoreProps> = ({
       orbitSpeed: 8,
       label: 'VOICE RECEPTIVE',
       subtext: 'Listening to acoustic input...',
+    },
+    TRANSCRIBING: {
+      primary: '#00e5ff',
+      glow: 'rgba(0, 229, 255, 0.65)',
+      halo: 'shadow-[0_0_110px_rgba(0,229,255,0.5)]',
+      orbitSpeed: 6,
+      label: 'ACOUSTIC DECODING',
+      subtext: 'Transcribing speech & identifying language...',
     },
     THINKING: {
       primary: '#a855f7',
@@ -137,9 +161,15 @@ export const JarvisHolographicCore: React.FC<JarvisHolographicCoreProps> = ({
   // Pulse scaling
   const coreScale =
     state === 'LISTENING'
-      ? [1, 1.05 + voiceLevel * 0.12, 1]
+      ? [1, 1.05 + voiceLevel * 0.15, 1]
+      : state === 'TRANSCRIBING'
+      ? [1, 1.05, 1]
       : state === 'SPEAKING'
       ? [1, 1.08, 1]
+      : state === 'SLEEPING'
+      ? [1, 1.03, 1]
+      : state === 'INTERRUPTED'
+      ? [1, 1.06, 1]
       : state === 'EXECUTING'
       ? [1, 1.04, 1]
       : state === 'AWAITING_APPROVAL'

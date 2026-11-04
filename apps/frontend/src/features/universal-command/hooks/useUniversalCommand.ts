@@ -97,12 +97,24 @@ export const useUniversalCommand = () => {
           const headers: Record<string, string> = { 'Content-Type': 'application/json' };
           if (token) headers['Authorization'] = `Bearer ${token}`;
 
+          const systemPrompt = `You are Nova, an intelligent personal AI operating assistant with an Indian Professional persona.
+- Mature, composed, warm, articulate, and direct.
+- Concise by default; provide explanations when requested.
+- Avoid repetitive greetings and do not call the user "sir" in every sentence.
+- You understand and speak English (Indian English), Tamil, and Hindi fluently, including natural code-switching (Tanglish, Hinglish).
+- Always reply in the language the user speaks to you:
+  * If the user speaks in Tamil or Tanglish, reply in natural conversational Tamil.
+  * If the user speaks in Hindi or Hinglish, reply in natural conversational Hindi.
+  * If the user speaks in English, reply in natural Indian English.
+- Confirm actions cleanly and intelligently.`;
+
           const res = await fetch(`${APP_CONFIG.apiBaseUrl}/inference/chat`, {
             method: 'POST',
             headers,
             body: JSON.stringify({
               prompt: rawInput,
               model: 'qwen3:8b',
+              system_prompt: systemPrompt,
               use_deterministic_tools: true,
             }),
           });

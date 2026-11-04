@@ -38,15 +38,12 @@ class ModelRouter:
             selected_model = self.config.default_model
             provider_id = self.config.default_provider
 
-        # 2. Local vs Cloud Preference Check
+        # 2. Local-Only Enforcement (Zero-Cost Policy)
         provider_cfg = self.config.providers.get(provider_id)
-        if not provider_cfg:
-            provider_cfg = ModelProviderConfig(provider_id="ollama")
-
-        if prefer_local and not provider_cfg.is_local:
-            # Fallback to local Ollama provider if local execution is enforced
+        if not provider_cfg or not getattr(provider_cfg, "is_enabled", True) or not provider_cfg.is_local:
+            # Force local Ollama provider to guarantee zero financial cost
             provider_id = "ollama"
-            provider_cfg = self.config.providers.get("ollama", provider_cfg)
+            provider_cfg = self.config.providers.get("ollama", ModelProviderConfig(provider_id="ollama"))
 
         logger.info(
             "model_selected",

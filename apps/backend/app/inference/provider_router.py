@@ -12,6 +12,7 @@ import structlog
 
 from app.inference.config import InferenceConfig
 from app.inference.provider_manager import ProviderManager
+from app.core.zero_cost_policy import ZeroCostPolicy, ZeroCostPolicyViolation
 
 logger = structlog.get_logger(__name__)
 
@@ -51,6 +52,10 @@ class ProviderRouter:
         """Dispatches completion call to target provider backend (Real Local/Cloud execution)."""
         target_provider = (provider or self.config.default_provider).lower()
         target_model = model or self.config.default_model
+
+        # Strictly enforce Zero-Cost Policy: Block commercial providers before any network call
+        ZeroCostPolicy.assert_llm_provider_allowed(target_provider)
+
         logger.info("request_dispatched", provider=target_provider, model=target_model, has_history=bool(messages))
 
         if target_provider in ("ollama", "local"):
@@ -165,7 +170,7 @@ class ProviderRouter:
                 logger.error("ollama_dispatch_failed", error=str(exc))
                 raise
 
-        raise NotImplementedError(
-            f"Provider '{target_provider}' is not currently configured for live inference. "
-            f"Please select 'ollama' or install target cloud provider API credentials."
+        raise ZeroCostPolicyViolation(
+            f"Provider '{target_provider}' is disabled under the Nova AI Zero-Cost Policy. "
+            f"Only local providers ('ollama') are authorized to guarantee zero cost and data privacy."
         )

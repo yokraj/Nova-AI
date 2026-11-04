@@ -16,6 +16,10 @@ import {
   VolumeX,
   Square,
   FileText,
+  Radio,
+  Settings2,
+  Power,
+  Sliders,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { CommandVisualState, AttachedFile, AttachedVision } from '@/types/dashboard';
@@ -48,6 +52,18 @@ export interface JarvisFloatingCommandBarProps {
   voiceError?: string | null;
   onClearVoiceError?: () => void;
   externalTranscript?: string;
+  handsFreeEnabled?: boolean;
+  onToggleHandsFree?: () => void;
+  isMuted?: boolean;
+  onToggleMute?: () => void;
+  onEndConversation?: () => void;
+  wakePhrase?: string;
+  onSetWakePhrase?: (phrase: string) => void;
+  voiceState?: string;
+  isConversationActive?: boolean;
+  detectedLanguage?: string;
+  activeVoiceName?: string;
+  onOpenVoiceSettings?: () => void;
 }
 
 export const JarvisFloatingCommandBar: React.FC<JarvisFloatingCommandBarProps> = ({
@@ -66,11 +82,25 @@ export const JarvisFloatingCommandBar: React.FC<JarvisFloatingCommandBarProps> =
   voiceError,
   onClearVoiceError,
   externalTranscript,
+  handsFreeEnabled = false,
+  onToggleHandsFree,
+  isMuted = false,
+  onToggleMute,
+  onEndConversation,
+  wakePhrase = 'Hey Nova',
+  onSetWakePhrase,
+  voiceState = 'IDLE',
+  isConversationActive = false,
+  detectedLanguage = 'en-IN',
+  activeVoiceName = 'NOVA — Indian Professional',
+  onOpenVoiceSettings,
 }) => {
   const [commandText, setCommandText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [attachedVision, setAttachedVision] = useState<AttachedVision | null>(null);
+  const [isEditingWakePhrase, setIsEditingWakePhrase] = useState(false);
+  const [tempWakePhrase, setTempWakePhrase] = useState(wakePhrase);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -358,6 +388,162 @@ export const JarvisFloatingCommandBar: React.FC<JarvisFloatingCommandBarProps> =
           ))}
         </div>
       )}
+
+      {/* 4.5. Hands-Free Mode & Wake Word HUD Strip */}
+      <div className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#030712]/90 border border-cyan-500/25 backdrop-blur-xl text-xs font-mono shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+        {/* Left: Hands-Free Switch & State Badge */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={onToggleHandsFree}
+            className={cn(
+              'px-2.5 py-1 rounded-lg flex items-center space-x-1.5 transition-all text-[11px] font-bold cursor-pointer select-none',
+              handsFreeEnabled
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/60 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                : 'bg-slate-900/60 text-slate-400 border border-slate-700/50 hover:text-slate-200 hover:border-slate-600'
+            )}
+            title={handsFreeEnabled ? "Hands-Free Active (say 'Hey Nova')" : 'Enable Hands-Free Wake Word Mode'}
+          >
+            <Radio
+              className={cn(
+                'w-3.5 h-3.5',
+                handsFreeEnabled ? 'text-cyan-400 animate-pulse' : 'text-slate-500'
+              )}
+            />
+            <span>Hands-Free: {handsFreeEnabled ? 'ON' : 'OFF'}</span>
+          </button>
+
+          {/* Dynamic Voice State Badge */}
+          {handsFreeEnabled ? (
+            <div
+              className={cn(
+                'px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase border',
+                voiceState === 'SLEEPING'
+                  ? 'bg-cyan-950/60 text-cyan-400 border-cyan-500/40 animate-pulse shadow-[0_0_10px_rgba(0,240,255,0.2)]'
+                  : voiceState === 'LISTENING'
+                  ? 'bg-sky-950/70 text-sky-300 border-sky-400/60 shadow-[0_0_12px_rgba(56,189,248,0.5)] animate-pulse'
+                  : voiceState === 'TRANSCRIBING'
+                  ? 'bg-cyan-950/80 text-cyan-200 border-cyan-400/80 shadow-[0_0_15px_rgba(0,229,255,0.6)] animate-pulse'
+                  : voiceState === 'THINKING'
+                  ? 'bg-purple-950/70 text-purple-300 border-purple-400/60'
+                  : voiceState === 'SPEAKING'
+                  ? 'bg-cyan-950/70 text-cyan-300 border-cyan-400/60 animate-pulse'
+                  : voiceState === 'INTERRUPTED'
+                  ? 'bg-orange-950/70 text-orange-400 border-orange-500/60'
+                  : 'bg-slate-900 text-slate-400 border-slate-700'
+              )}
+            >
+              {voiceState === 'SLEEPING'
+                ? `STANDBY: "${wakePhrase}"`
+                : voiceState === 'LISTENING'
+                ? 'LISTENING...'
+                : voiceState === 'TRANSCRIBING'
+                ? 'DECODING...'
+                : voiceState === 'THINKING'
+                ? 'REASONING...'
+                : voiceState === 'SPEAKING'
+                ? 'SPEAKING (Say "Stop")'
+                : voiceState === 'INTERRUPTED'
+                ? 'INTERRUPTED'
+                : voiceState}
+            </div>
+          ) : (
+            <span className="text-[11px] text-slate-500 font-mono hidden sm:inline">
+              Push-to-talk mode ready
+            </span>
+          )}
+
+          {/* Multilingual Status Pill */}
+          <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-900/90 text-cyan-300 border border-cyan-500/30 hidden md:inline font-mono">
+            LANG: {detectedLanguage.toUpperCase()}
+          </span>
+        </div>
+
+        {/* Right: Wake Config, Mute, End Session */}
+        <div className="flex items-center space-x-1.5">
+          {handsFreeEnabled && (
+            <>
+              {/* Wake Phrase Config / Display */}
+              {isEditingWakePhrase ? (
+                <div className="flex items-center space-x-1">
+                  <input
+                    type="text"
+                    value={tempWakePhrase}
+                    onChange={(e) => setTempWakePhrase(e.target.value)}
+                    placeholder="e.g. Hey Nova"
+                    className="px-2 py-0.5 rounded bg-black border border-cyan-500/60 text-[11px] text-cyan-300 focus:outline-none w-28"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        onSetWakePhrase?.(tempWakePhrase);
+                        setIsEditingWakePhrase(false);
+                      } else if (e.key === 'Escape') {
+                        setIsEditingWakePhrase(false);
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      onSetWakePhrase?.(tempWakePhrase);
+                      setIsEditingWakePhrase(false);
+                    }}
+                    className="px-2 py-0.5 rounded bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-[10px] font-bold cursor-pointer"
+                  >
+                    Set
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setTempWakePhrase(wakePhrase);
+                    setIsEditingWakePhrase(true);
+                  }}
+                  className="px-2 py-0.5 rounded bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 text-[10px] border border-slate-700/60 flex items-center space-x-1 cursor-pointer transition-colors"
+                  title="Configure Wake Phrase"
+                >
+                  <Settings2 className="w-3 h-3 text-cyan-400" />
+                  <span>Wake: "{wakePhrase}"</span>
+                </button>
+              )}
+
+              {/* Microphone Mute / Unmute */}
+              <button
+                onClick={onToggleMute}
+                className={cn(
+                  'p-1.5 rounded-lg transition-colors cursor-pointer',
+                  isMuted
+                    ? 'bg-rose-950/70 text-rose-300 border border-rose-500/60 shadow-[0_0_10px_rgba(244,63,94,0.3)]'
+                    : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-900/80'
+                )}
+                title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+              >
+                {isMuted ? <MicOff className="w-3.5 h-3.5 text-rose-400" /> : <Mic className="w-3.5 h-3.5" />}
+              </button>
+
+              {/* End Active Conversation Session */}
+              {isConversationActive && (
+                <button
+                  onClick={onEndConversation}
+                  className="px-2 py-0.5 rounded bg-rose-950/50 text-rose-300 hover:bg-rose-900/70 hover:text-white border border-rose-500/40 text-[10px] font-bold flex items-center space-x-1 cursor-pointer transition-colors"
+                  title="End Conversation Session (or say 'Goodbye Nova')"
+                >
+                  <Power className="w-3 h-3 text-rose-400" />
+                  <span className="hidden sm:inline">End Session</span>
+                </button>
+              )}
+            </>
+          )}
+
+          {/* Dedicated Voice Settings Dialog Toggle */}
+          {onOpenVoiceSettings && (
+            <button
+              onClick={onOpenVoiceSettings}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-900/80 transition-colors cursor-pointer border border-transparent hover:border-cyan-500/30 ml-1"
+              title="Nova Voice 2.0 Settings & Personality"
+            >
+              <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* 5. Central Floating Glassmorphic Command Input Bar */}
       <div className="relative w-full rounded-2xl p-[1px] bg-gradient-to-r from-cyan-500/40 via-sky-500/20 to-blue-600/40 shadow-[0_8px_35px_rgba(0,0,0,0.8),0_0_25px_rgba(0,240,255,0.12)]">

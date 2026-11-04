@@ -53,7 +53,13 @@ class Settings(BaseSettings):
     AI_MAX_RETRIES: int = 3
     AI_TIMEOUT_SECONDS: float = 60.0
 
-    # Future Provider API Keys
+    # Permanent Zero-Cost & Local-First Directives
+    ZERO_COST_POLICY_ENFORCED: bool = True
+    ALLOW_PAID_APIS: bool = False
+    VOICE_OFFLINE_PRIMARY: bool = True
+
+    # Commercial Paid API Keys (Prohibited under Permanent Zero-Cost Policy)
+    # Kept only as inert None references to prevent import errors in legacy stubs
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None

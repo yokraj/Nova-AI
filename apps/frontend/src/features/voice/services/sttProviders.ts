@@ -11,7 +11,7 @@ export interface STTProvider {
   id: string;
   name: string;
   isAvailable(): Promise<boolean> | boolean;
-  transcribe(audioBlob: Blob): Promise<STTTranscriptionResult>;
+  transcribe(audioBlob: Blob, language?: string): Promise<STTTranscriptionResult>;
 }
 
 /**
@@ -39,7 +39,7 @@ export class LocalWhisperSTTProvider implements STTProvider {
     }
   }
 
-  async transcribe(audioBlob: Blob): Promise<STTTranscriptionResult> {
+  async transcribe(audioBlob: Blob, language?: string): Promise<STTTranscriptionResult> {
     const formData = new FormData();
     const filename = audioBlob.type.includes('ogg')
       ? 'audio.ogg'
@@ -52,7 +52,8 @@ export class LocalWhisperSTTProvider implements STTProvider {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${APP_CONFIG.apiBaseUrl}/voice/transcribe`, {
+    const langQuery = language && language !== 'auto' ? `?language=${encodeURIComponent(language)}` : '';
+    const res = await fetch(`${APP_CONFIG.apiBaseUrl}/voice/transcribe${langQuery}`, {
       method: 'POST',
       headers,
       body: formData,
@@ -110,10 +111,10 @@ export class BrowserWebSpeechSTTProvider implements STTProvider {
 export class CompositeSTTService {
   private localWhisper = new LocalWhisperSTTProvider();
 
-  async transcribeAudioBlob(audioBlob: Blob): Promise<STTTranscriptionResult> {
-    // Primary: Local-First Whisper
+  async transcribeAudioBlob(audioBlob: Blob, language?: string): Promise<STTTranscriptionResult> {
+    // Primary: Local-First Multilingual Whisper
     try {
-      return await this.localWhisper.transcribe(audioBlob);
+      return await this.localWhisper.transcribe(audioBlob, language);
     } catch (err: any) {
       console.warn('Local Whisper transcription failure:', err);
       throw err;

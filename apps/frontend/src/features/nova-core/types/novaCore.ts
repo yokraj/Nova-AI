@@ -1,6 +1,8 @@
 export type NovaCoreState =
+  | 'SLEEPING'
   | 'IDLE'
   | 'LISTENING'
+  | 'TRANSCRIBING'
   | 'THINKING'
   | 'PLANNING'
   | 'EXECUTING'
@@ -8,6 +10,7 @@ export type NovaCoreState =
   | 'COMPLETED'
   | 'FAILED'
   | 'SPEAKING'
+  | 'INTERRUPTED'
   | 'SUCCESS'
   | 'ERROR';
 

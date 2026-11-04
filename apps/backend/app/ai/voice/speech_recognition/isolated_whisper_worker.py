@@ -10,6 +10,16 @@ import argparse
 import os
 
 try:
+    import av
+    _orig_av_open = av.open
+    def _safe_av_open(*args, **kwargs):
+        kwargs.pop("metadata_errors", None)
+        return _orig_av_open(*args, **kwargs)
+    av.open = _safe_av_open
+except Exception:
+    pass
+
+try:
     from faster_whisper import WhisperModel
 except ImportError:
     print(json.dumps({"error": "faster-whisper is not installed in STT environment.", "success": False}))
@@ -19,7 +29,8 @@ except ImportError:
 def main():
     parser = argparse.ArgumentParser(description="Isolated Whisper STT Worker")
     parser.add_argument("--audio", required=True, help="Path to input audio file")
-    parser.add_argument("--model", default="tiny.en", help="Whisper model name")
+    parser.add_argument("--model", default="tiny", help="Whisper model name (tiny, base, tiny.en)")
+    parser.add_argument("--language", default=None, help="Audio language ('en', 'ta', 'hi', or auto)")
     args = parser.parse_args()
 
     if not os.path.exists(args.audio):
@@ -27,8 +38,13 @@ def main():
         sys.exit(1)
 
     try:
-        model = WhisperModel(args.model, device="cpu", compute_type="int8")
-        segments, info = model.transcribe(args.audio)
+        model_name = args.model
+        lang = args.language if args.language and args.language != "auto" else None
+        if lang in ["ta", "hi"] and model_name.endswith(".en"):
+            model_name = "tiny"
+
+        model = WhisperModel(model_name, device="cpu", compute_type="int8")
+        segments, info = model.transcribe(args.audio, language=lang, beam_size=5, vad_filter=True)
         transcript = " ".join([seg.text for seg in segments]).strip()
 
         lang_prob = getattr(info, "language_probability", 0.95)
@@ -37,6 +53,7 @@ def main():
             "transcript": transcript,
             "confidence": float(lang_prob),
             "language": getattr(info, "language", "en"),
+            "duration": float(getattr(info, "duration", 0.0)),
             "success": True,
         }
         print(json.dumps(result))

@@ -15,6 +15,7 @@ import JarvisFloatingCommandBar from '@/features/universal-command/components/Ja
 import JarvisRightContextPanels from '@/components/dashboard/JarvisRightContextPanels';
 import JarvisBottomQuickActions from '@/components/dashboard/JarvisBottomQuickActions';
 import CommandContextDrawer from '@/features/universal-command/components/CommandContextDrawer';
+import { VoiceSettings } from '@/features/voice/components/VoiceSettings';
 
 // Execution Pipeline Views for active in-flight multi-step operations
 import ExecutionProgress from '@/features/universal-command/components/ExecutionProgress';
@@ -27,6 +28,7 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [rightPanelsOpen, setRightPanelsOpen] = useState(true);
+  const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
 
   // Live real data hooks
   const {
@@ -149,6 +151,7 @@ export const DashboardPage: React.FC = () => {
           <JarvisHolographicCore
             state={getCoreState()}
             userName={user?.name || 'Commander'}
+            voiceLevel={voiceAssistant.voiceLevel}
             onClick={() => {
               if (voiceAssistant.isSpeaking) {
                 voiceAssistant.stopSpeaking();
@@ -175,6 +178,18 @@ export const DashboardPage: React.FC = () => {
             voiceError={voiceAssistant.voiceError}
             onClearVoiceError={voiceAssistant.clearVoiceError}
             externalTranscript={voiceAssistant.transcript}
+            handsFreeEnabled={voiceAssistant.handsFreeEnabled}
+            onToggleHandsFree={voiceAssistant.toggleHandsFree}
+            isMuted={voiceAssistant.isMuted}
+            onToggleMute={voiceAssistant.toggleMute}
+            onEndConversation={voiceAssistant.endConversationSession}
+            wakePhrase={voiceAssistant.wakePhrase}
+            onSetWakePhrase={voiceAssistant.setWakePhrase}
+            voiceState={voiceAssistant.voiceState}
+            isConversationActive={voiceAssistant.isConversationActive}
+            detectedLanguage={voiceAssistant.detectedLanguage}
+            activeVoiceName={voiceAssistant.activeVoiceInfo.name}
+            onOpenVoiceSettings={() => setIsVoiceSettingsOpen(true)}
             onExecuteCommand={(cmd, mode, attachments) =>
               processCommand(
                 cmd,
@@ -192,19 +207,19 @@ export const DashboardPage: React.FC = () => {
             permissionDetails={
               currentCommand?.permission
                 ? {
-                    action: currentCommand.permission.requiredCapability || currentCommand.permission.scope,
-                    resource: currentCommand.permission.scope || 'System Resources',
-                    riskLevel: currentCommand.permission.riskLevel,
-                  }
+                  action: currentCommand.permission.requiredCapability || currentCommand.permission.scope,
+                  resource: currentCommand.permission.scope || 'System Resources',
+                  riskLevel: currentCommand.permission.riskLevel,
+                }
                 : undefined
             }
             executionResult={
               currentCommand?.result
                 ? {
-                    success: currentCommand.result.success,
-                    message: currentCommand.result.message,
-                    details: currentCommand.result.errorReason || currentCommand.result.suggestedNextStep,
-                  }
+                  success: currentCommand.result.success,
+                  message: currentCommand.result.message,
+                  details: currentCommand.result.errorReason || currentCommand.result.suggestedNextStep,
+                }
                 : undefined
             }
           />
@@ -269,6 +284,15 @@ export const DashboardPage: React.FC = () => {
         isOpen={isDrawerOpen}
         domain={drawerDomain}
         onClose={closeDrawer}
+      />
+
+      {/* Nova Voice 2.0 Intelligence & Personality Settings Modal */}
+      <VoiceSettings
+        isOpen={isVoiceSettingsOpen}
+        onClose={() => setIsVoiceSettingsOpen(false)}
+        settings={voiceAssistant.voiceSettings}
+        onUpdateSettings={voiceAssistant.updateVoiceSettings}
+        activeVoiceInfo={voiceAssistant.activeVoiceInfo}
       />
     </div>
   );

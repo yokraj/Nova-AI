@@ -27,24 +27,32 @@ class FallbackEngine:
     def execute_fallback_strategy(
         self, failed_provider: str, failed_model: str, prompt: str
     ) -> Dict[str, Any]:
-        """Calculates fallback alternative provider, model, and context reduction."""
+        """Calculates fallback alternative provider, model, and context reduction.
+        
+        Enforces Zero-Cost Policy: Never falls back to commercial or paid cloud providers.
+        Remains strictly within local Ollama models.
+        """
         self.retry_manager.record_failure(failed_provider)
 
-        # Fallback cascade logic
-        if failed_provider == "ollama":
-            fallback_provider = "vllm"
-            fallback_model = "llama3.1:70b"
-        elif failed_provider == "vllm":
-            fallback_provider = "openai"
-            fallback_model = "gpt-4o"
-        else:
+        # Hardened Local-Only Fallback Cascade
+        # If a large local model fails, fallback to a lighter local Ollama model
+        if failed_model in ("qwen3:8b", "llama3.1:70b", "deepseek-r1-distill-qwen"):
             fallback_provider = "ollama"
             fallback_model = "llama3.2"
+        else:
+            fallback_provider = "ollama"
+            fallback_model = self.config.default_model
 
-        logger.info("fallback_strategy_triggered", original_provider=failed_provider, fallback_provider=fallback_provider)
+        logger.info(
+            "local_fallback_strategy_triggered",
+            original_provider=failed_provider,
+            original_model=failed_model,
+            fallback_provider=fallback_provider,
+            fallback_model=fallback_model,
+        )
         return {
             "fallback_provider": fallback_provider,
             "fallback_model": fallback_model,
             "reduce_context": True,
-            "cpu_fallback": False,
+            "cpu_fallback": True,
         }
