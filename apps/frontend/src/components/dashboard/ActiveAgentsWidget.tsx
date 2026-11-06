@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Bot,
   Search,
@@ -8,41 +8,71 @@ import {
   X,
   Play,
   Pause,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { DashboardAgent } from '@/types/dashboard';
 import { MOCK_ACTIVE_AGENTS_EXTENDED } from '@/mock/mockDashboardData';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
-interface ActiveAgentsWidgetProps {
+export interface ActiveAgentsWidgetProps {
   className?: string;
   agents?: DashboardAgent[];
   onInspectAgent?: (agent: DashboardAgent) => void;
+  onRefresh?: () => void;
+  isLoading?: boolean;
 }
 
 export const ActiveAgentsWidget: React.FC<ActiveAgentsWidgetProps> = ({
   className,
-  agents = MOCK_ACTIVE_AGENTS_EXTENDED,
+  agents: externalAgents,
   onInspectAgent,
+  onRefresh,
+  isLoading: externalIsLoading,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'busy' | 'idle'>('all');
   const [selectedAgent, setSelectedAgent] = useState<DashboardAgent | null>(null);
-  const [localAgents, setLocalAgents] = useState<DashboardAgent[]>(agents);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    setLocalAgents(agents);
-  }, [agents]);
+  // Auto-connect to live dashboard data if props are omitted
+  const {
+    data: dashboardData,
+    connectionStatus,
+    isRefreshing,
+    refresh: hookRefresh,
+  } = useDashboardData();
 
-  const filteredAgents = localAgents.filter((agent) => {
-    const matchesSearch =
-      agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      agent.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      agent.division.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      agent.currentTask.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || agent.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const isConnected = connectionStatus === 'connected' && !!dashboardData?.isConnected;
+  const rawAgents = externalAgents || (isConnected ? dashboardData?.agents : undefined) || MOCK_ACTIVE_AGENTS_EXTENDED;
+  const lastUpdated = dashboardData?.lastUpdated;
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : isRefreshing;
+
+  const [localAgents, setLocalAgents] = useState<DashboardAgent[]>(rawAgents);
+
+  React.useEffect(() => {
+    setLocalAgents(rawAgents);
+  }, [rawAgents]);
+
+  const handleRefreshClick = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      hookRefresh(true);
+    }
+  };
+
+  const filteredAgents = useMemo(() => {
+    return localAgents.filter((agent) => {
+      const matchesSearch =
+        agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.division.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        agent.currentTask.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || agent.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [localAgents, searchQuery, statusFilter]);
 
   const handleInspect = (agent: DashboardAgent) => {
     setSelectedAgent(agent);
@@ -54,7 +84,8 @@ export const ActiveAgentsWidget: React.FC<ActiveAgentsWidgetProps> = ({
       prev.map((a) => {
         if (a.id === agentId) {
           const nextStatus = a.status === 'active' || a.status === 'busy' ? 'idle' : 'active';
-          setActionNotice(`Agent ${a.name} status switched to ${nextStatus}.`);
+          setActionNotice(`Agent "${a.name}" set to ${nextStatus}.`);
+          setTimeout(() => setActionNotice(null), 3000);
           return { ...a, status: nextStatus };
         }
         return a;
@@ -72,32 +103,49 @@ export const ActiveAgentsWidget: React.FC<ActiveAgentsWidgetProps> = ({
       )}
     >
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shrink-0">
             <Bot className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
-              Active Agent Workforce
-            </h3>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
+                Active Agent Workforce
+              </h3>
+              {lastUpdated && (
+                <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
+                  • Polled: {new Date(lastUpdated).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 font-mono">
-              67 Autonomous Agents across 9 Engineering & Operations Divisions
+              {localAgents.length} Registered Agents across 9 Engineering & Operations Divisions
             </p>
           </div>
         </div>
 
-        {/* Status Pill */}
-        <div className="flex items-center space-x-2">
-          {localAgents[0]?.isLive ? (
+        {/* Status Pill & Refresh */}
+        <div className="flex items-center space-x-2 shrink-0">
+          <button
+            onClick={handleRefreshClick}
+            disabled={isLoading}
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh Agents List"
+            aria-label="Refresh agents"
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin text-cyan-400')} />
+          </button>
+
+          {isConnected ? (
             <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
               <span>LIVE POOL ({onlineCount} ACTIVE)</span>
             </span>
           ) : (
-            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>OFFLINE • CACHED ({onlineCount} ACTIVE)</span>
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-slate-400 text-xs font-mono font-bold">
+              <span className="w-1.5 h-1.5 rounded-full border border-slate-400" />
+              <span>STANDALONE POOL ({onlineCount} ENROLLED)</span>
             </span>
           )}
         </div>
@@ -127,14 +175,14 @@ export const ActiveAgentsWidget: React.FC<ActiveAgentsWidgetProps> = ({
         </div>
 
         {/* Status Filter Tabs */}
-        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono">
+        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono overflow-x-auto scrollbar-none">
           <Filter className="w-3 h-3 text-slate-500 ml-1 mr-0.5 shrink-0" />
           {(['all', 'active', 'busy', 'idle'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setStatusFilter(tab)}
               className={cn(
-                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer',
+                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap',
                 statusFilter === tab
                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold'
                   : 'text-slate-400 hover:text-slate-200'
@@ -145,6 +193,22 @@ export const ActiveAgentsWidget: React.FC<ActiveAgentsWidgetProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Action Notice */}
+      {actionNotice && (
+        <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-200 text-xs font-mono flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span>{actionNotice}</span>
+          </div>
+          <button
+            onClick={() => setActionNotice(null)}
+            className="text-slate-400 hover:text-slate-200 text-xs cursor-pointer font-bold"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Agents Stream Grid */}
       {filteredAgents.length === 0 ? (
@@ -168,59 +232,61 @@ export const ActiveAgentsWidget: React.FC<ActiveAgentsWidgetProps> = ({
               key={agent.id}
               onClick={() => handleInspect(agent)}
               className={cn(
-                'p-3.5 rounded-2xl bg-slate-900/80 border transition-all cursor-pointer space-y-2.5 group',
+                'p-3.5 rounded-2xl bg-slate-900/80 border transition-all cursor-pointer space-y-2.5 group flex flex-col justify-between',
                 selectedAgent?.id === agent.id
                   ? 'border-cyan-500/60 bg-slate-900 shadow-[0_0_15px_rgba(0,240,255,0.15)]'
-                  : 'border-slate-800/90 hover:border-slate-700 hover:bg-slate-900/90'
+                  : 'border-slate-800/90 hover:border-slate-700/80 hover:bg-slate-900/90'
               )}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center text-slate-950 font-black text-xs shadow-md shrink-0">
-                    {agent.avatar}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-bold text-slate-100 truncate group-hover:text-cyan-300 transition-colors">
-                      {agent.name}
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center text-slate-950 font-black text-xs shadow-md shrink-0">
+                      {agent.avatar}
                     </div>
-                    <div className="text-[10px] font-mono text-slate-400 truncate">{agent.division}</div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-slate-100 truncate group-hover:text-cyan-300 transition-colors">
+                        {agent.name}
+                      </div>
+                      <div className="text-[10px] font-mono text-slate-400 truncate">{agent.division}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2 shrink-0">
+                    <span className="text-[10px] font-mono text-cyan-400 font-semibold">{agent.latencyMs}ms</span>
+                    <span
+                      className={cn(
+                        'text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border uppercase',
+                        agent.status === 'active'
+                          ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                          : agent.status === 'busy'
+                          ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                          : 'bg-slate-800 border-slate-700 text-slate-400'
+                      )}
+                    >
+                      {agent.status}
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-2 shrink-0">
-                  <span className="text-[10px] font-mono text-cyan-400 font-semibold">{agent.latencyMs}ms</span>
-                  <span
-                    className={cn(
-                      'text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border uppercase',
-                      agent.status === 'active'
-                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                        : agent.status === 'busy'
-                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
-                        : 'bg-slate-800 border-slate-700 text-slate-400'
-                    )}
-                  >
-                    {agent.status}
-                  </span>
+                {/* Task Details & Progress */}
+                <div className="space-y-1.5 pt-2">
+                  <div className="text-xs text-slate-300 font-medium truncate flex items-center justify-between">
+                    <span className="truncate">{agent.currentTask}</span>
+                    <span className="text-[10px] font-mono text-cyan-300 font-bold ml-2 shrink-0">
+                      {agent.progress}%
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full transition-all duration-300"
+                      style={{ width: `${agent.progress}%` }}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Task Details & Progress */}
-              <div className="space-y-1.5 pt-0.5">
-                <div className="text-xs text-slate-300 font-medium truncate flex items-center justify-between">
-                  <span className="truncate">{agent.currentTask}</span>
-                  <span className="text-[10px] font-mono text-cyan-300 font-bold ml-2 shrink-0">
-                    {agent.progress}%
-                  </span>
-                </div>
-                <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full transition-all duration-300"
-                    style={{ width: `${agent.progress}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1 border-t border-slate-800/60">
+              <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800/60">
                 <span>
                   Done: <strong className="text-slate-200">{agent.tasksCompleted}</strong>
                 </span>
@@ -249,22 +315,6 @@ export const ActiveAgentsWidget: React.FC<ActiveAgentsWidgetProps> = ({
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Action Notice */}
-      {actionNotice && (
-        <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-200 text-xs font-mono flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-            <span>{actionNotice}</span>
-          </div>
-          <button
-            onClick={() => setActionNotice(null)}
-            className="text-slate-400 hover:text-slate-200 text-xs cursor-pointer font-bold"
-          >
-            Dismiss
-          </button>
         </div>
       )}
 

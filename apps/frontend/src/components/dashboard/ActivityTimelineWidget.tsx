@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   History,
   FileCheck,
@@ -10,10 +10,12 @@ import {
   Clock,
   Search,
   X,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { ActivityTimelineItem } from '@/types/dashboard';
 import { MOCK_ACTIVITY_TIMELINE } from '@/mock/mockDashboardData';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 const iconMap: Record<string, React.ElementType> = {
   Search,
@@ -24,27 +26,54 @@ const iconMap: Record<string, React.ElementType> = {
   Cpu,
 };
 
-interface ActivityTimelineWidgetProps {
+export interface ActivityTimelineWidgetProps {
   className?: string;
   activities?: ActivityTimelineItem[];
+  onRefresh?: () => void;
+  isLoading?: boolean;
 }
 
 export const ActivityTimelineWidget: React.FC<ActivityTimelineWidgetProps> = ({
   className,
-  activities = MOCK_ACTIVITY_TIMELINE,
+  activities: externalActivities,
+  onRefresh,
+  isLoading: externalIsLoading,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Hook into live dashboard telemetry
+  const {
+    data: dashboardData,
+    connectionStatus,
+    isRefreshing,
+    refresh: hookRefresh,
+  } = useDashboardData();
+
+  const isConnected = connectionStatus === 'connected' && !!dashboardData?.isConnected;
+  const rawActivities = externalActivities || (isConnected ? dashboardData?.timeline : undefined) || MOCK_ACTIVITY_TIMELINE;
+  const lastUpdated = dashboardData?.lastUpdated;
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : isRefreshing;
+
+  const handleRefreshClick = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      hookRefresh(true);
+    }
+  };
+
   const categories = ['all', 'agent', 'memory', 'security', 'automation'];
 
-  const filteredActivities = activities.filter((act) => {
-    const matchesCategory = selectedCategory === 'all' || act.category === selectedCategory;
-    const matchesSearch =
-      act.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      act.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredActivities = useMemo(() => {
+    return rawActivities.filter((act) => {
+      const matchesCategory = selectedCategory === 'all' || act.category === selectedCategory;
+      const matchesSearch =
+        act.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        act.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [rawActivities, selectedCategory, searchQuery]);
 
   return (
     <div
@@ -54,19 +83,51 @@ export const ActivityTimelineWidget: React.FC<ActivityTimelineWidgetProps> = ({
       )}
     >
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shrink-0">
             <History className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
-              Recent System Activity Stream
-            </h3>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
+                Recent System Activity Stream
+              </h3>
+              {lastUpdated && (
+                <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
+                  • Polled: {new Date(lastUpdated).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 font-mono">
               Audit timeline of agent actions, memory indexing & automation
             </p>
           </div>
+        </div>
+
+        {/* Status Pill & Refresh */}
+        <div className="flex items-center space-x-2 shrink-0">
+          <button
+            onClick={handleRefreshClick}
+            disabled={isLoading}
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh Timeline"
+            aria-label="Refresh timeline"
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin text-cyan-400')} />
+          </button>
+
+          {isConnected ? (
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              <span>AUDIT LOG (LIVE STREAM)</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-slate-400 text-xs font-mono font-bold">
+              <span className="w-1.5 h-1.5 rounded-full border border-slate-400" />
+              <span>STANDALONE AUDIT LOG</span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -93,14 +154,14 @@ export const ActivityTimelineWidget: React.FC<ActivityTimelineWidgetProps> = ({
         </div>
 
         {/* Category Filters */}
-        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono">
+        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono overflow-x-auto scrollbar-none">
           <Filter className="w-3 h-3 text-slate-500 ml-1 mr-0.5 shrink-0" />
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
               className={cn(
-                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer',
+                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap',
                 selectedCategory === cat
                   ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold'
                   : 'text-slate-400 hover:text-slate-200'
@@ -128,7 +189,7 @@ export const ActivityTimelineWidget: React.FC<ActivityTimelineWidgetProps> = ({
                   <Icon className="w-3.5 h-3.5" />
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 transition-all space-y-1">
+                <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700/80 transition-all space-y-1">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-slate-100 group-hover:text-cyan-300 transition-colors">
                       {act.title}

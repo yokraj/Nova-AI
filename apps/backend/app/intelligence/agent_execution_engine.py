@@ -38,6 +38,7 @@ from app.intelligence.unified_tool_registry import (
 from app.security.workspace_guard import WorkspaceSecurityGuard, WorkspaceSecurityException
 from app.ai.desktop_automation.security_engine import SecurityEngine
 from app.ai.desktop_automation.exceptions import ApprovalRequiredError
+from app.intelligence.dynamic_tool_engine import DynamicToolEngine, DynamicExecutionResult
 
 logger = structlog.get_logger("agent_execution_engine")
 
@@ -162,8 +163,38 @@ class AgentExecutionEngine:
         self.guard = workspace_guard or WorkspaceSecurityGuard()
         self.security_engine = security_engine or SecurityEngine()
         self.tools = tool_registry or UnifiedToolRegistry(self.guard, self.security_engine)
+        self.dynamic_engine = DynamicToolEngine(
+            tool_registry=self.tools,
+            workspace_guard=self.guard,
+            security_engine=self.security_engine,
+        )
         self._active_cancellations: Set[str] = set()
         logger.info("agent_execution_engine_initialized")
+
+    async def execute_dynamic_tool_loop(
+        self,
+        prompt: str,
+        messages: Optional[List[Dict[str, Any]]] = None,
+        system_prompt: Optional[str] = None,
+        model: str = "qwen3:8b",
+        provider: str = "ollama",
+        max_rounds: int = 5,
+        time_budget_sec: float = 60.0,
+        approval_token: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> DynamicExecutionResult:
+        """Executes genuine LLM-driven structured tool calling through DynamicToolEngine."""
+        return await self.dynamic_engine.execute_tool_loop(
+            prompt=prompt,
+            messages=messages,
+            system_prompt=system_prompt,
+            model=model,
+            provider=provider,
+            max_rounds=max_rounds,
+            time_budget_sec=time_budget_sec,
+            approval_token=approval_token,
+            user_id=user_id,
+        )
 
     # =========================================================================
     # Phase 1: Task Understanding & Intent Detection

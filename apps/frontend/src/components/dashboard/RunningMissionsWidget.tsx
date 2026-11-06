@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Target,
   Clock,
@@ -13,12 +13,14 @@ import {
   ChevronUp,
   Layers,
   StopCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { MissionItem } from '@/types/dashboard';
 import { MOCK_MISSIONS } from '@/mock/mockDashboardData';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
-interface RunningMissionsWidgetProps {
+export interface RunningMissionsWidgetProps {
   className?: string;
   missions?: MissionItem[];
   onSelectMission?: (mission: MissionItem) => void;
@@ -26,34 +28,62 @@ interface RunningMissionsWidgetProps {
   onResumeMission?: (id: string) => Promise<boolean> | void;
   onCancelMission?: (id: string) => Promise<boolean> | void;
   onApproveMission?: (id: string) => Promise<boolean> | void;
+  onRefresh?: () => void;
+  isLoading?: boolean;
 }
 
 export const RunningMissionsWidget: React.FC<RunningMissionsWidgetProps> = ({
   className,
-  missions = MOCK_MISSIONS,
+  missions: externalMissions,
   onSelectMission,
   onPauseMission,
   onResumeMission,
   onCancelMission,
   onApproveMission,
+  onRefresh,
+  isLoading: externalIsLoading,
 }) => {
   const [filter, setFilter] = useState<'all' | 'running' | 'queued' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [missionsList, setMissionsList] = useState<MissionItem[]>(missions);
   const [expandedMissionId, setExpandedMissionId] = useState<string | null>(null);
   const [selectedMissionForModal, setSelectedMissionForModal] = useState<MissionItem | null>(null);
 
-  React.useEffect(() => {
-    setMissionsList(missions);
-  }, [missions]);
+  // Hook into live dashboard data if props are omitted
+  const {
+    data: dashboardData,
+    connectionStatus,
+    isRefreshing,
+    refresh: hookRefresh,
+  } = useDashboardData();
 
-  const filteredMissions = missionsList.filter((m) => {
-    const matchesFilter = filter === 'all' || m.status === filter;
-    const matchesSearch =
-      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  const isConnected = connectionStatus === 'connected' && !!dashboardData?.isConnected;
+  const rawMissions = externalMissions || (isConnected ? dashboardData?.missions : undefined) || MOCK_MISSIONS;
+  const lastUpdated = dashboardData?.lastUpdated;
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : isRefreshing;
+
+  const [missionsList, setMissionsList] = useState<MissionItem[]>(rawMissions);
+
+  React.useEffect(() => {
+    setMissionsList(rawMissions);
+  }, [rawMissions]);
+
+  const handleRefreshClick = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      hookRefresh(true);
+    }
+  };
+
+  const filteredMissions = useMemo(() => {
+    return missionsList.filter((m) => {
+      const matchesFilter = filter === 'all' || m.status === filter;
+      const matchesSearch =
+        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.category.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
+  }, [missionsList, filter, searchQuery]);
 
   const toggleMissionPause = (id: string) => {
     const target = missionsList.find((m) => m.id === id);
@@ -90,32 +120,50 @@ export const RunningMissionsWidget: React.FC<RunningMissionsWidgetProps> = ({
         className
       )}
     >
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
+      {/* Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0">
             <Target className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
-              Autonomous Missions
-            </h3>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
+                Autonomous Missions & Goals
+              </h3>
+              {lastUpdated && (
+                <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
+                  • Polled: {new Date(lastUpdated).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 font-mono">
               Multi-agent DAG task decomposition & pipeline orchestration
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          {missionsList[0]?.isLive ? (
+        {/* Status Pill & Refresh */}
+        <div className="flex items-center space-x-2 shrink-0">
+          <button
+            onClick={handleRefreshClick}
+            disabled={isLoading}
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh Missions"
+            aria-label="Refresh missions"
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin text-purple-400')} />
+          </button>
+
+          {isConnected ? (
             <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
               <span>LIVE PIPELINE ({runningCount} ACTIVE)</span>
             </span>
           ) : (
-            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>OFFLINE • CACHED ({runningCount} ACTIVE)</span>
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-slate-400 text-xs font-mono font-bold">
+              <span className="w-1.5 h-1.5 rounded-full border border-slate-400" />
+              <span>STANDALONE PIPELINE ({runningCount} QUEUED)</span>
             </span>
           )}
         </div>
@@ -144,14 +192,14 @@ export const RunningMissionsWidget: React.FC<RunningMissionsWidgetProps> = ({
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono">
+        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono overflow-x-auto scrollbar-none">
           <Filter className="w-3 h-3 text-slate-500 ml-1 mr-0.5 shrink-0" />
           {(['all', 'running', 'queued', 'completed'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setFilter(tab)}
               className={cn(
-                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer',
+                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap',
                 filter === tab
                   ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold'
                   : 'text-slate-400 hover:text-slate-200'
@@ -189,7 +237,7 @@ export const RunningMissionsWidget: React.FC<RunningMissionsWidgetProps> = ({
                   'p-4 rounded-2xl bg-slate-900/80 border transition-all space-y-3',
                   mission.status === 'running'
                     ? 'border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.1)]'
-                    : 'border-slate-800/90 hover:border-slate-700'
+                    : 'border-slate-800/90 hover:border-slate-700/80'
                 )}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">

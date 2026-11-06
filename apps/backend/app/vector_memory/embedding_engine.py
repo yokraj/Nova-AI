@@ -34,20 +34,25 @@ class EmbeddingEngine:
         self, text: str, model_name: Optional[str] = None, context_type: str = "general"
     ) -> Dict[str, Any]:
         """Generates embedding vector for a single text input."""
+        if not text or not text.strip():
+            raise EmbeddingGenerationError("Cannot generate embedding for empty text input.")
+
+        clean_text = text.strip()
         if not model_name:
-            selection = self.router.select_model_for_context(text, context_type=context_type)
+            selection = self.router.select_model_for_context(clean_text, context_type=context_type)
             model_name = selection["model_name"]
 
         provider = self.registry.get_provider(model_name)
-        vector = await provider.generate_vector(text)
+        vector = await provider.generate_vector(clean_text)
         self.validate_dimension(vector, provider.dimension)
         normalized = self.normalize_vector(vector)
 
-        logger.info("embedding_generated", model_name=model_name, dimension=provider.dimension, text_len=len(text))
+        logger.info("embedding_generated", model_name=model_name, dimension=provider.dimension, text_len=len(clean_text))
         return {
             "model_name": model_name,
             "dimension": provider.dimension,
             "vector": normalized,
+            "is_neural": getattr(provider, "is_neural", True),
         }
 
     async def generate_batch(

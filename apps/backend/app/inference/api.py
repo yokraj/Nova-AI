@@ -28,7 +28,10 @@ from app.inference.schemas import (
     ModelCatalogItem,
     InferenceHealthResponse,
     InferenceStatisticsResponse,
+    ApprovalActionResponse,
+    PendingApprovalItem,
 )
+from app.security.approval_manager import approval_manager
 
 router = APIRouter(prefix="/inference", tags=["Enterprise Inference Gateway"])
 
@@ -100,3 +103,71 @@ async def get_inference_health(db: AsyncSession = Depends(get_db)) -> Any:
     """Runs gateway diagnostic health checks."""
     service = BenchmarkService(repository=InferenceRepository(db))
     return await service.check_health()
+
+
+# =============================================================================
+# Server-Managed Sensitive Tool Approvals (F2.0.3.2)
+# =============================================================================
+
+@router.post(
+    "/approvals/{approval_id}/approve",
+    response_model=ApprovalActionResponse,
+    dependencies=[require_inference_chat],
+)
+async def approve_tool_execution(approval_id: str) -> Any:
+    """Approves a pending sensitive tool execution request."""
+    success, msg = approval_manager.approve(approval_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=msg,
+        )
+    return ApprovalActionResponse(
+        status="APPROVED",
+        approval_id=approval_id,
+        message=msg,
+        approval_token=approval_id,
+    )
+
+
+@router.post(
+    "/approvals/{approval_id}/reject",
+    response_model=ApprovalActionResponse,
+    dependencies=[require_inference_chat],
+)
+async def reject_tool_execution(approval_id: str) -> Any:
+    """Rejects a pending sensitive tool execution request."""
+    success, msg = approval_manager.reject(approval_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=msg,
+        )
+    return ApprovalActionResponse(
+        status="REJECTED",
+        approval_id=approval_id,
+        message=msg,
+    )
+
+
+@router.get(
+    "/approvals/pending",
+    response_model=List[PendingApprovalItem],
+    dependencies=[require_inference_chat],
+)
+async def list_pending_approvals() -> Any:
+    """Lists all active pending sensitive action approvals awaiting authorization."""
+    pending = approval_manager.list_pending()
+    return [
+        PendingApprovalItem(
+            approval_id=rec.approval_id,
+            tool_name=rec.tool_name,
+            arguments=rec.arguments,
+            action_description=rec.action_description,
+            user_id=rec.user_id,
+            created_at=rec.created_at,
+            expires_at=rec.expires_at,
+        )
+        for rec in pending
+    ]
+

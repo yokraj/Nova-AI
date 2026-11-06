@@ -31,18 +31,18 @@ class EmbeddingRouter:
         text_len = len(text)
         type_lower = context_type.lower()
 
-        # 1. Selection Matrix
+        # 1. Selection Matrix (Canonical Local Models)
         if "code" in type_lower or "repository" in type_lower:
-            selected_model = "Instructor"
+            selected_model = "nomic-embed-text"
             dimension = 768
         elif text_len > 4000:
-            selected_model = "BAAI/bge-base-en-v1.5"
+            selected_model = "bge-base"
             dimension = 768
         elif "conversation" in type_lower or "message" in type_lower:
-            selected_model = "Nomic Embed"
+            selected_model = "nomic-embed-text"
             dimension = 768
         elif max_latency_ms and max_latency_ms < 10.0:
-            selected_model = "E5 Small"
+            selected_model = "all-minilm"
             dimension = 384
         else:
             selected_model = self.config.default_model

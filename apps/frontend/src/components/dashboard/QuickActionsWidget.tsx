@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   MessageSquarePlus,
   Mic,
@@ -37,7 +37,7 @@ const iconMap: Record<string, React.ElementType> = {
   Zap,
 };
 
-interface QuickActionsWidgetProps {
+export interface QuickActionsWidgetProps {
   onSelectAction?: (commandSuggestion: string) => void;
   className?: string;
   actions?: QuickActionItem[];
@@ -52,17 +52,20 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const filteredActions = actions.filter((act) => {
-    const matchesCategory = selectedCategory === 'all' || act.category === selectedCategory;
-    const matchesSearch =
-      act.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      act.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  const filteredActions = useMemo(() => {
+    return actions.filter((act) => {
+      const matchesCategory = selectedCategory === 'all' || act.category === selectedCategory;
+      const matchesSearch =
+        act.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        act.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [actions, selectedCategory, searchQuery]);
 
   const handleActionClick = (action: QuickActionItem) => {
     if (action.commandSuggestion) {
-      setToastMessage(`Selected action: "${action.title}". Routing command to Universal Core.`);
+      setToastMessage(`Routing action: "${action.title}" to Universal Command Core.`);
+      setTimeout(() => setToastMessage(null), 3000);
       if (onSelectAction) {
         onSelectAction(action.commandSuggestion);
       }
@@ -77,19 +80,27 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
       )}
     >
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
             <Zap className="w-4 h-4" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
-              Quick System Actions
+              Quick System Actions & Commands
             </h3>
             <p className="text-xs text-slate-400 font-mono">
               One-click AI OS capabilities, macros & workspace shortcuts
             </p>
           </div>
+        </div>
+
+        {/* Status Pill */}
+        <div className="flex items-center space-x-2 shrink-0">
+          <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+            <span>{filteredActions.length} ACTIONS READY</span>
+          </span>
         </div>
       </div>
 
@@ -116,14 +127,14 @@ export const QuickActionsWidget: React.FC<QuickActionsWidgetProps> = ({
         </div>
 
         {/* Category Filters */}
-        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono">
+        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono overflow-x-auto scrollbar-none">
           <Filter className="w-3 h-3 text-slate-500 ml-1 mr-0.5 shrink-0" />
           {(['all', 'create', 'run', 'navigate'] as const).map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
               className={cn(
-                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer',
+                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap',
                 selectedCategory === cat
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
                   : 'text-slate-400 hover:text-slate-200'

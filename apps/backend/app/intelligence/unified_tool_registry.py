@@ -24,6 +24,7 @@ import structlog
 from app.security.workspace_guard import WorkspaceSecurityGuard, WorkspaceSecurityException
 from app.ai.desktop_automation.security_engine import SecurityEngine
 from app.ai.desktop_automation.exceptions import ApprovalRequiredError
+from app.security.approval_manager import approval_manager
 from app.ai.desktop_automation.application_launcher import ApplicationLauncher
 from app.ai.desktop_automation.file_manager import FileManager
 from app.ai.desktop_automation.native_bridge_client import NativeBridgeClient
@@ -130,6 +131,97 @@ class UnifiedToolRegistry:
         """Returns all tool schemas formatted for LLM tool calling."""
         return [tool.to_schema() for tool in self._tools.values()]
 
+    def determine_action_permission(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any],
+    ) -> Tuple[ToolPermissionLevel, str]:
+        """Authoritative determination of invocation permission level and action key."""
+        tool = self.get(tool_name)
+        if not tool:
+            return ToolPermissionLevel.RESTRICTED, tool_name
+
+        level = tool.permission_level
+        action_key = tool_name
+
+        if tool_name == "create_file":
+            fp = arguments.get("file_path", "")
+            if fp:
+                try:
+                    resolved = self.guard.resolve_workspace_path(fp)
+                    if resolved.exists():
+                        level = ToolPermissionLevel.SENSITIVE
+                        action_key = "create_file_overwrite"
+                except Exception:
+                    level = ToolPermissionLevel.SENSITIVE
+
+        elif tool_name == "file_operation":
+            op = str(arguments.get("operation", "")).lower().strip()
+            action_key = f"file_operation_{op}"
+            if op in ("delete", "move"):
+                level = ToolPermissionLevel.SENSITIVE
+            else:
+                level = ToolPermissionLevel.USER
+
+        elif tool_name == "keyboard_press":
+            key = str(arguments.get("key_name", "")).lower().strip()
+            if key in ("enter", "delete", "return"):
+                level = ToolPermissionLevel.SENSITIVE
+                action_key = f"keyboard_press_{key}"
+            else:
+                level = ToolPermissionLevel.USER
+
+        elif tool_name == "system_control":
+            act = str(arguments.get("action", "")).upper().strip()
+            if act in ("CLIPBOARD_GET", "CLIPBOARD_SET"):
+                level = ToolPermissionLevel.SENSITIVE
+                action_key = f"system_control_{act.lower()}"
+            else:
+                level = ToolPermissionLevel.USER
+
+        return level, action_key
+
+    def validate_tool_arguments(self, tool_name: str, arguments: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        """Validates tool arguments against JSON Schema types, required fields, and enum constraints."""
+        tool = self.get(tool_name)
+        if not tool:
+            return False, f"Tool '{tool_name}' is not registered."
+
+        if not isinstance(arguments, dict):
+            return False, f"Arguments for tool '{tool_name}' must be a JSON object, received {type(arguments).__name__}."
+
+        schema = tool.parameters_schema or {}
+        required = schema.get("required", [])
+        properties = schema.get("properties", {})
+
+        # Check required fields
+        for req in required:
+            if req not in arguments:
+                return False, f"Missing required parameter '{req}' for tool '{tool_name}'."
+
+        # Validate types and enums for provided arguments
+        for k, v in arguments.items():
+            if k not in properties:
+                continue
+
+            prop_spec = properties[k]
+            expected_type = prop_spec.get("type")
+            if expected_type == "string" and not isinstance(v, str):
+                return False, f"Parameter '{k}' must be a string, received {type(v).__name__}."
+            elif expected_type == "integer" and (not isinstance(v, int) or isinstance(v, bool)):
+                return False, f"Parameter '{k}' must be an integer, received {type(v).__name__}."
+            elif expected_type == "boolean" and not isinstance(v, bool):
+                return False, f"Parameter '{k}' must be a boolean, received {type(v).__name__}."
+            elif expected_type == "array" and not isinstance(v, list):
+                return False, f"Parameter '{k}' must be an array, received {type(v).__name__}."
+            elif expected_type == "object" and not isinstance(v, dict):
+                return False, f"Parameter '{k}' must be an object, received {type(v).__name__}."
+
+            if "enum" in prop_spec and v not in prop_spec["enum"]:
+                return False, f"Parameter '{k}' value '{v}' is invalid. Allowed values: {prop_spec['enum']}."
+
+        return True, None
+
     # =========================================================================
     # Tool Execution Pipeline
     # =========================================================================
@@ -137,7 +229,8 @@ class UnifiedToolRegistry:
         self,
         name: str,
         arguments: Dict[str, Any],
-        is_user_approved: bool = False,
+        approval_token: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> ToolExecutionResult:
         """Executes a registered tool with full security, validation, and outcome verification."""
         t0 = time.perf_counter()
@@ -150,30 +243,57 @@ class UnifiedToolRegistry:
                 duration_sec=0.0,
             )
 
-        # 1. Permission and Security Validation
-        if tool.permission_level in (ToolPermissionLevel.SENSITIVE, ToolPermissionLevel.RESTRICTED):
-            op_sub = str(arguments.get("operation", "")).lower()
-            action_candidates = [name, f"{name}_{op_sub}", f"file_{op_sub}"] if op_sub else [name]
-            needs_approval = any(self.security_engine.check_approval_required(act) for act in action_candidates)
+        # 0. JSON Schema argument validation
+        valid, arg_err = self.validate_tool_arguments(name, arguments)
+        if not valid:
+            logger.warning("tool_argument_validation_failed", tool=name, error=arg_err)
+            return ToolExecutionResult(
+                tool_name=name,
+                success=False,
+                error=f"Argument Validation Error: {arg_err}",
+                duration_sec=round(time.perf_counter() - t0, 4),
+                verified=False,
+                verification_details="Failed JSON Schema validation.",
+            )
 
-            if needs_approval and not is_user_approved:
-                logger.warning("tool_execution_blocked_requires_approval", tool=name, action_candidates=action_candidates)
+        # 1. Authoritative Permission and Server Approval Validation
+        perm_level, action_key = self.determine_action_permission(name, arguments)
+        if perm_level in (ToolPermissionLevel.SENSITIVE, ToolPermissionLevel.RESTRICTED):
+            if not approval_token:
+                logger.warning("tool_execution_blocked_requires_approval", tool=name, action=action_key)
                 return ToolExecutionResult(
                     tool_name=name,
                     success=False,
-                    error=f"Permission Error: Action '{action_candidates[-1]}' requires explicit user confirmation before execution.",
+                    error=f"Permission Error: Action '{action_key}' requires explicit human approval before execution.",
                     duration_sec=round(time.perf_counter() - t0, 4),
                     verified=False,
-                    verification_details="Blocked by SecurityEngine approval hold.",
+                    verification_details="Blocked by ServerApprovalManager (no approval token provided).",
+                )
+
+            is_valid, validation_msg = approval_manager.validate_and_consume_approval(
+                approval_token=approval_token,
+                tool_name=name,
+                arguments=arguments,
+                user_id=user_id,
+            )
+            if not is_valid:
+                logger.warning("tool_execution_blocked_invalid_approval", tool=name, reason=validation_msg)
+                return ToolExecutionResult(
+                    tool_name=name,
+                    success=False,
+                    error=f"Permission Error: {validation_msg}",
+                    duration_sec=round(time.perf_counter() - t0, 4),
+                    verified=False,
+                    verification_details="Blocked by ServerApprovalManager validation check.",
                 )
 
         # 2. Check path safety if arguments contain file paths
-        for k in ("file_path", "source_path", "destination_path", "path"):
+        for k in ("file_path", "source_path", "destination_path", "path", "save_path"):
             if k in arguments and isinstance(arguments[k], str) and arguments[k].strip():
                 path_val = arguments[k]
                 try:
                     self.guard.resolve_workspace_path(path_val)
-                except WorkspaceSecurityException as e:
+                except (WorkspaceSecurityException, ValueError) as e:
                     logger.warning("tool_path_security_rejection", tool=name, path=path_val, error=str(e))
                     return ToolExecutionResult(
                         tool_name=name,
@@ -347,7 +467,7 @@ class UnifiedToolRegistry:
         self.register(
             ToolDefinition(
                 name="open_application",
-                description="Launches an authorized desktop application on the Windows workstation (e.g. 'notepad', 'calculator', 'cmd', 'code') and verifies its physical running process.",
+                description="Launches an approved desktop application on the Windows workstation (e.g. 'notepad', 'calculator', 'code', 'vscode') and verifies its physical running process.",
                 category="desktop",
                 parameters_schema={
                     "type": "object",
@@ -368,7 +488,7 @@ class UnifiedToolRegistry:
                     },
                     "required": ["app_name"],
                 },
-                permission_level=ToolPermissionLevel.USER,
+                permission_level=ToolPermissionLevel.SENSITIVE,
                 handler=self._handle_open_application,
                 verifier=self._verify_open_application,
             )
@@ -411,7 +531,7 @@ class UnifiedToolRegistry:
                     },
                     "required": ["app_name"],
                 },
-                permission_level=ToolPermissionLevel.USER,
+                permission_level=ToolPermissionLevel.SENSITIVE,
                 handler=self._handle_close_application,
             )
         )
@@ -780,10 +900,26 @@ class UnifiedToolRegistry:
         arguments: Optional[List[str]] = None,
         file_path: Optional[str] = None,
     ) -> Dict[str, Any]:
-        args = list(arguments) if arguments else []
+        args = []
+        if arguments:
+            for arg in arguments:
+                # If argument appears to be a file path, enforce workspace boundary
+                arg_str = str(arg).strip()
+                if any(sep in arg_str for sep in ["/", "\\"]) or ("." in arg_str and not arg_str.startswith("-") and not arg_str.startswith("/")):
+                    try:
+                        resolved_arg = self.guard.resolve_workspace_path(arg_str)
+                        args.append(str(resolved_arg))
+                    except (WorkspaceSecurityException, ValueError) as pse:
+                        raise WorkspaceSecurityException(
+                            f"Argument '{arg}' refers to an unauthorized path outside workspace: {pse}"
+                        )
+                else:
+                    args.append(arg_str)
+
         if file_path:
             resolved = self.guard.resolve_workspace_path(file_path)
             args.append(str(resolved))
+
         app_info = self.launcher.launch_application(app_name, args if args else None)
         return {
             "app_name": app_info.name,

@@ -48,7 +48,18 @@ class EmbeddingService:
             project=request.project,
         )
 
-        await self.vector_store.add_vector(mem_id, res["vector"], {"workspace": request.workspace, "project": request.project})
+        await self.vector_store.add_vector(
+            mem_id,
+            res["vector"],
+            {
+                "workspace": request.workspace,
+                "project": request.project,
+                "model_name": res["model_name"],
+                "dimension": res["dimension"],
+                "is_neural": res.get("is_neural", True),
+                "text_snippet": request.text[:150],
+            },
+        )
 
         return EmbeddingResponse(
             id=record.id,

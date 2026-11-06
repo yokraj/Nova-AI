@@ -163,18 +163,18 @@ export const JarvisHolographicCore: React.FC<JarvisHolographicCoreProps> = ({
     state === 'LISTENING'
       ? [1, 1.05 + voiceLevel * 0.15, 1]
       : state === 'TRANSCRIBING'
-      ? [1, 1.05, 1]
-      : state === 'SPEAKING'
-      ? [1, 1.08, 1]
-      : state === 'SLEEPING'
-      ? [1, 1.03, 1]
-      : state === 'INTERRUPTED'
-      ? [1, 1.06, 1]
-      : state === 'EXECUTING'
-      ? [1, 1.04, 1]
-      : state === 'AWAITING_APPROVAL'
-      ? [1, 1.06, 1]
-      : [1, 1.02, 1];
+        ? [1, 1.05, 1]
+        : state === 'SPEAKING'
+          ? [1, 1.08, 1]
+          : state === 'SLEEPING'
+            ? [1, 1.03, 1]
+            : state === 'INTERRUPTED'
+              ? [1, 1.06, 1]
+              : state === 'EXECUTING'
+                ? [1, 1.04, 1]
+                : state === 'AWAITING_APPROVAL'
+                  ? [1, 1.06, 1]
+                  : [1, 1.02, 1];
 
   return (
     <div className={cn('flex flex-col items-center justify-center select-none relative', className)}>

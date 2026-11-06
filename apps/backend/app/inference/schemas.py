@@ -21,7 +21,7 @@ class ChatInferenceRequest(BaseModel):
 
     prompt: str = Field(min_length=1, description="Prompt text or conversation message")
     conversation_id: Optional[str] = Field(default=None, description="Conversation thread identifier")
-    messages: Optional[List[Dict[str, str]]] = Field(default=None, description="Prior conversation history turns")
+    messages: Optional[List[Dict[str, Any]]] = Field(default=None, description="Prior conversation history turns")
     model: Optional[str] = Field(default=None, description="Optional target model override")
     provider: Optional[str] = Field(default=None, description="Optional target provider override")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
@@ -29,6 +29,8 @@ class ChatInferenceRequest(BaseModel):
     system_prompt: Optional[str] = Field(default=None)
     stream: bool = Field(default=False)
     use_deterministic_tools: bool = Field(default=True, description="Enable deterministic tools for arithmetic and safe code execution")
+    tools_enabled: bool = Field(default=True, description="Enable dynamic local LLM tool calling")
+    approval_token: Optional[str] = Field(default=None, description="Server-issued single-use approval token for executing confirmed sensitive actions")
 
 
 class ChatInferenceResponse(BaseModel):
@@ -46,6 +48,8 @@ class ChatInferenceResponse(BaseModel):
     created_at: datetime
     is_deterministic: bool = Field(default=False, description="Whether resolved by deterministic engine")
     verification: Optional[Dict[str, Any]] = Field(default=None, description="Response validation results")
+    tool_calls: Optional[List[Dict[str, Any]]] = Field(default=None, description="Executed tool calls and arguments")
+    rounds: Optional[int] = Field(default=None, description="Number of reasoning/execution rounds")
 
 
 class TaskClassificationRequest(BaseModel):
@@ -100,3 +104,25 @@ class InferenceStatisticsResponse(BaseModel):
     average_tokens_per_second: float
     active_gpu_count: int
     timestamp: datetime
+
+
+class ApprovalActionResponse(BaseModel):
+    """Response schema for approval lifecycle actions (approve, reject)."""
+
+    status: str = Field(description="Action outcome status ('APPROVED', 'REJECTED', 'ERROR')")
+    approval_id: str = Field(description="Approval identifier")
+    message: str = Field(description="Human-readable result summary")
+    approval_token: Optional[str] = Field(default=None, description="Token to supply in chat request if approved")
+
+
+class PendingApprovalItem(BaseModel):
+    """Representation of a pending tool action awaiting user authorization."""
+
+    approval_id: str
+    tool_name: str
+    arguments: Dict[str, Any]
+    action_description: str
+    user_id: Optional[str] = None
+    created_at: float
+    expires_at: float
+

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Brain,
   Network,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { MOCK_MEMORY_ITEMS } from '@/mock/mockMemory';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 const DEFAULT_KNOWLEDGE_UPDATES = [
   { entity: 'FastAPI Microservice', type: 'Framework', relation: 'implements', target: 'REST API Gateway', time: '5m ago' },
@@ -17,33 +18,60 @@ const DEFAULT_KNOWLEDGE_UPDATES = [
   { entity: 'Agent Runtime', type: 'Subsystem', relation: 'orchestrates', target: 'TaskGraph & PlanCritic', time: '1h ago' },
 ];
 
-export const MemoryActivityWidget: React.FC<{ className?: string }> = ({ className }) => {
+export interface MemoryActivityWidgetProps {
+  className?: string;
+  onRefresh?: () => void;
+  isLoading?: boolean;
+}
+
+export const MemoryActivityWidget: React.FC<MemoryActivityWidgetProps> = ({
+  className,
+  onRefresh,
+  isLoading: externalIsLoading,
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | 'memory' | 'knowledge'>('all');
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const filteredMemories = MOCK_MEMORY_ITEMS.filter((mem) => {
-    if (!searchQuery) return true;
-    return (
-      mem.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mem.workspace.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mem.type.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
+  const {
+    data: dashboardData,
+    connectionStatus,
+    isRefreshing,
+    refresh: hookRefresh,
+  } = useDashboardData();
 
-  const filteredKnowledge = DEFAULT_KNOWLEDGE_UPDATES.filter((item) => {
-    if (!searchQuery) return true;
-    return (
-      item.entity.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.target.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.relation.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
+  const isConnected = connectionStatus === 'connected' && !!dashboardData?.isConnected;
+  const lastUpdated = dashboardData?.lastUpdated;
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : isRefreshing;
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => setIsRefreshing(false), 800);
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      hookRefresh(true);
+    }
   };
+
+  const filteredMemories = useMemo(() => {
+    return MOCK_MEMORY_ITEMS.filter((mem) => {
+      if (!searchQuery) return true;
+      return (
+        mem.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        mem.workspace.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        mem.type.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    });
+  }, [searchQuery]);
+
+  const filteredKnowledge = useMemo(() => {
+    return DEFAULT_KNOWLEDGE_UPDATES.filter((item) => {
+      if (!searchQuery) return true;
+      return (
+        item.entity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.target.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.relation.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    });
+  }, [searchQuery]);
 
   return (
     <div
@@ -53,36 +81,51 @@ export const MemoryActivityWidget: React.FC<{ className?: string }> = ({ classNa
       )}
     >
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0">
             <Brain className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
-              Memory & Knowledge Intelligence
-            </h3>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
+                Memory & Knowledge Intelligence
+              </h3>
+              {lastUpdated && (
+                <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
+                  • Polled: {new Date(lastUpdated).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 font-mono">
               Vector memory store & ontological entity graph activity
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        {/* Status Badge & Refresh */}
+        <div className="flex items-center space-x-2 shrink-0">
           <button
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            disabled={isLoading}
             className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer disabled:opacity-50"
             title="Re-index Memory"
             aria-label="Refresh memory activity"
           >
-            <RefreshCw className={cn('w-3.5 h-3.5', isRefreshing && 'animate-spin text-purple-400')} />
+            <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin text-purple-400')} />
           </button>
 
-          <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300 text-xs font-mono font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
-            <span>HNSW INDEXED</span>
-          </span>
+          {isConnected ? (
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              <span>HNSW INDEX (LIVE)</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-slate-400 text-xs font-mono font-bold">
+              <span className="w-1.5 h-1.5 rounded-full border border-slate-400" />
+              <span>STANDALONE INDEX</span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -108,13 +151,13 @@ export const MemoryActivityWidget: React.FC<{ className?: string }> = ({ classNa
           )}
         </div>
 
-        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono">
+        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono overflow-x-auto scrollbar-none">
           {(['all', 'memory', 'knowledge'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer',
+                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap',
                 activeTab === tab
                   ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold'
                   : 'text-slate-400 hover:text-slate-200'
@@ -130,7 +173,7 @@ export const MemoryActivityWidget: React.FC<{ className?: string }> = ({ classNa
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Sub-panel 1: MEMORY */}
         {(activeTab === 'all' || activeTab === 'memory') && (
-          <div className="space-y-3 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
+          <div className="space-y-3 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800/90">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Brain className="w-4 h-4 text-purple-400" />
@@ -179,7 +222,7 @@ export const MemoryActivityWidget: React.FC<{ className?: string }> = ({ classNa
 
         {/* Sub-panel 2: KNOWLEDGE GRAPH */}
         {(activeTab === 'all' || activeTab === 'knowledge') && (
-          <div className="space-y-3 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
+          <div className="space-y-3 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800/90">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Network className="w-4 h-4 text-blue-400" />

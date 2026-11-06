@@ -20,6 +20,11 @@ class EmbeddingGenerationError(VectorError):
     pass
 
 
+class EmbeddingModelUnavailableError(EmbeddingGenerationError):
+    """Raised when the requested local neural embedding model is not installed or available on Ollama."""
+    pass
+
+
 class VectorDimensionMismatchError(VectorError):
     """Raised when input vector dimension does not match index dimension."""
     pass

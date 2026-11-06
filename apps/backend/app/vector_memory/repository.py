@@ -35,7 +35,7 @@ class VectorRepository:
         self,
         memory_id: str,
         vector: List[float],
-        model_name: str = "BAAI/bge-small-en-v1.5",
+        model_name: str = "nomic-embed-text",
         workspace: str = "Nova",
         project: Optional[str] = None,
     ) -> EmbeddingModel:
@@ -104,3 +104,36 @@ class VectorRepository:
             except Exception:
                 pass
         return len(self._in_memory_embeddings)
+
+    async def list_embeddings(
+        self,
+        workspace: Optional[str] = None,
+        project: Optional[str] = None,
+        model_name: Optional[str] = None,
+    ) -> List[EmbeddingModel]:
+        """Lists stored embedding records with optional workspace, project, and model filters."""
+        if self.session is not None:
+            try:
+                stmt = select(EmbeddingModel)
+                filters = []
+                if workspace:
+                    filters.append(EmbeddingModel.workspace == workspace)
+                if project:
+                    filters.append(EmbeddingModel.project == project)
+                if model_name:
+                    filters.append(EmbeddingModel.model_name == model_name)
+                if filters:
+                    stmt = stmt.where(and_(*filters))
+                res = await self.session.execute(stmt)
+                return list(res.scalars().all())
+            except Exception as e:
+                logger.warning("failed_to_list_embeddings_from_db", error=str(e))
+
+        results = list(self._in_memory_embeddings.values())
+        if workspace:
+            results = [r for r in results if r.workspace == workspace]
+        if project:
+            results = [r for r in results if r.project == project]
+        if model_name:
+            results = [r for r in results if r.model_name == model_name]
+        return results

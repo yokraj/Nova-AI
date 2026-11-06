@@ -10,6 +10,7 @@ import structlog
 from app.rag.config import RAGConfig
 from app.rag.keyword_search import KeywordSearchEngine
 from app.rag.semantic_search import SemanticSearchEngine
+from app.vector_memory.exceptions import EmbeddingModelUnavailableError
 
 logger = structlog.get_logger(__name__)
 
@@ -38,7 +39,11 @@ class HybridSearchEngine:
         """Executes parallel keyword + semantic retrieval and merges via RRF score fusion."""
         # 1. Parallel Keyword & Semantic Retrieval
         keyword_results = await self.keyword_engine.search_keywords(query, workspace=workspace, project=project, limit=limit)
-        semantic_results = await self.semantic_engine.search_semantic(query, workspace=workspace, project=project, limit=limit)
+        try:
+            semantic_results = await self.semantic_engine.search_semantic(query, workspace=workspace, project=project, limit=limit)
+        except EmbeddingModelUnavailableError as emu:
+            logger.warning("semantic_search_unavailable_in_hybrid_rag", error=str(emu))
+            semantic_results = []
 
         # 2. Candidate Deduplication Map
         candidate_map: Dict[str, Dict[str, Any]] = {}

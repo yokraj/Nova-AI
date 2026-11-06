@@ -15,9 +15,17 @@ class SimilarityEngine:
     """Enterprise Mathematical Vector Similarity & MMR Engine."""
 
     @staticmethod
+    def validate_compatible_dimensions(v1: List[float], v2: List[float]) -> bool:
+        """Validates that both vectors are non-empty and possess identical dimensions."""
+        return bool(v1 and v2 and len(v1) == len(v2))
+
+    @staticmethod
     def cosine_similarity(v1: List[float], v2: List[float]) -> float:
-        """Calculates cosine similarity between two vectors."""
-        if len(v1) != len(v2) or not v1:
+        """Calculates cosine similarity between two vectors with strict dimension validation."""
+        if not v1 or not v2:
+            return 0.0
+        if len(v1) != len(v2):
+            logger.debug("vector_dimension_mismatch_in_similarity", dim1=len(v1), dim2=len(v2))
             return 0.0
         dot = sum(a * b for a, b in zip(v1, v2))
         mag1 = math.sqrt(sum(a * a for a in v1))

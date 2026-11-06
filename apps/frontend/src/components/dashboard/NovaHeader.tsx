@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Calendar, Clock, FolderGit2, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
-interface NovaHeaderProps {
+export interface NovaHeaderProps {
   className?: string;
   isConnected?: boolean;
   onRefresh?: () => void;
@@ -11,12 +12,36 @@ interface NovaHeaderProps {
 
 export const NovaHeader: React.FC<NovaHeaderProps> = ({
   className,
-  isConnected = true,
+  isConnected: externalIsConnected,
   onRefresh,
-  isRefreshing = false,
+  isRefreshing: externalIsRefreshing,
 }) => {
   const [timeString, setTimeString] = useState<string>('');
   const [dateString, setDateString] = useState<string>('');
+
+  // Auto-connect to live dashboard context if props are omitted
+  const {
+    data: dashboardData,
+    connectionStatus,
+    isRefreshing: hookIsRefreshing,
+    refresh: hookRefresh,
+  } = useDashboardData();
+
+  const isConnected =
+    externalIsConnected !== undefined
+      ? externalIsConnected
+      : connectionStatus === 'connected' && !!dashboardData?.isConnected;
+
+  const isRefreshing =
+    externalIsRefreshing !== undefined ? externalIsRefreshing : hookIsRefreshing;
+
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      hookRefresh(true);
+    }
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -63,8 +88,15 @@ export const NovaHeader: React.FC<NovaHeaderProps> = ({
             <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 uppercase tracking-wider">
               AI OS v3.5
             </span>
-            <span className="hidden sm:inline-block text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 uppercase">
-              PHASE F1.6 • LIVE CONNECTED
+            <span
+              className={cn(
+                'hidden sm:inline-block text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border uppercase',
+                isConnected
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                  : 'bg-slate-800/80 text-slate-400 border-slate-700/80'
+              )}
+            >
+              {isConnected ? 'LIVE CONNECTED' : 'STANDALONE MODE'}
             </span>
           </div>
           <p className="text-xs font-mono text-slate-400 tracking-wide mt-0.5">
@@ -96,17 +128,15 @@ export const NovaHeader: React.FC<NovaHeaderProps> = ({
         </div>
 
         {/* Refresh Action Button */}
-        {onRefresh && (
-          <button
-            onClick={onRefresh}
-            disabled={isRefreshing}
-            className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-cyan-400 disabled:opacity-50"
-            title="Refresh System Telemetry"
-            aria-label="Refresh telemetry"
-          >
-            <RefreshCw className={cn('w-3.5 h-3.5', isRefreshing && 'animate-spin text-cyan-400')} />
-          </button>
-        )}
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer focus:outline-none focus:ring-1 focus:ring-cyan-400 disabled:opacity-50"
+          title="Refresh System Telemetry"
+          aria-label="Refresh telemetry"
+        >
+          <RefreshCw className={cn('w-3.5 h-3.5', isRefreshing && 'animate-spin text-cyan-400')} />
+        </button>
 
         {/* System Online / Offline Status Pill */}
         <div
@@ -114,7 +144,7 @@ export const NovaHeader: React.FC<NovaHeaderProps> = ({
             'flex items-center space-x-2 px-3 py-1.5 rounded-xl border text-xs font-bold tracking-wider transition-all',
             isConnected
               ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.15)]'
-              : 'bg-rose-500/15 border-rose-500/30 text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.15)]'
+              : 'bg-slate-800/80 border-slate-700/80 text-slate-400'
           )}
         >
           {isConnected ? (
@@ -125,8 +155,8 @@ export const NovaHeader: React.FC<NovaHeaderProps> = ({
             </>
           ) : (
             <>
-              <span className="w-2 h-2 rounded-full bg-rose-400" />
-              <WifiOff className="w-3.5 h-3.5 text-rose-400" />
+              <span className="w-2 h-2 rounded-full border border-slate-400" />
+              <WifiOff className="w-3.5 h-3.5 text-slate-400" />
               <span>STANDALONE LOCAL</span>
             </>
           )}

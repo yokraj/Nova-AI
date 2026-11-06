@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Bell,
   CheckCheck,
@@ -9,16 +9,20 @@ import {
   AlertCircle,
   X,
   Filter,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { NotificationItem } from '@/types';
 import { MOCK_NOTIFICATIONS } from '@/mock/mockNotifications';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
-interface NotificationsWidgetProps {
+export interface NotificationsWidgetProps {
   className?: string;
   initialNotifications?: NotificationItem[];
   onMarkRead?: (id: string) => void;
   onDeleteNotification?: (id: string) => void;
+  onRefresh?: () => void;
+  isLoading?: boolean;
 }
 
 export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
@@ -26,9 +30,20 @@ export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
   initialNotifications,
   onMarkRead,
   onDeleteNotification,
+  onRefresh,
+  isLoading: externalIsLoading,
 }) => {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(
-    initialNotifications || [
+  // Hook into live dashboard data
+  const {
+    data: dashboardData,
+    connectionStatus,
+    isRefreshing,
+    refresh: hookRefresh,
+  } = useDashboardData();
+
+  const isConnected = connectionStatus === 'connected' && !!dashboardData?.isConnected;
+  const rawNotifications =
+    initialNotifications || (isConnected && dashboardData?.notifications ? dashboardData.notifications : undefined) || [
       ...MOCK_NOTIFICATIONS,
       {
         id: 'notif-3',
@@ -54,16 +69,29 @@ export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
         timestamp: '1 hour ago',
         read: true,
       },
-    ]
-  );
+    ];
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>(rawNotifications);
+  const [severityFilter, setSeverityFilter] = useState<'all' | 'info' | 'success' | 'warning' | 'error'>('all');
+
+  const lastUpdated = dashboardData?.lastUpdated;
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : isRefreshing;
 
   React.useEffect(() => {
     if (initialNotifications) {
       setNotifications(initialNotifications);
+    } else if (isConnected && dashboardData?.notifications) {
+      setNotifications(dashboardData.notifications);
     }
-  }, [initialNotifications]);
+  }, [initialNotifications, isConnected, dashboardData?.notifications]);
 
-  const [severityFilter, setSeverityFilter] = useState<'all' | 'info' | 'success' | 'warning' | 'error'>('all');
+  const handleRefreshClick = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      hookRefresh(true);
+    }
+  };
 
   const markAllRead = () => {
     notifications.forEach((n) => onMarkRead?.(n.id));
@@ -99,10 +127,12 @@ export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
     }
   };
 
-  const filteredNotifications = notifications.filter((n) => {
-    if (severityFilter === 'all') return true;
-    return n.type === severityFilter;
-  });
+  const filteredNotifications = useMemo(() => {
+    return notifications.filter((n) => {
+      if (severityFilter === 'all') return true;
+      return n.type === severityFilter;
+    });
+  }, [notifications, severityFilter]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -114,26 +144,55 @@ export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
       )}
     >
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
         <div className="flex items-center space-x-2.5">
-          <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 relative shrink-0">
+          <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 relative shrink-0">
             <Bell className="w-4 h-4" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
             )}
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
-              System Notifications & Alerts
-            </h3>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
+                System Notifications & Alerts
+              </h3>
+              {lastUpdated && (
+                <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
+                  • Polled: {new Date(lastUpdated).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 font-mono">
-              {unreadCount} unread system notifications
+              Audit security notices, telemetry alerts & workflow completions
             </p>
           </div>
         </div>
 
-        {/* Global Notification Actions */}
-        <div className="flex items-center space-x-2">
+        {/* Global Notification Actions & Refresh */}
+        <div className="flex items-center space-x-2 shrink-0">
+          <button
+            onClick={handleRefreshClick}
+            disabled={isLoading}
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh Notifications"
+            aria-label="Refresh notifications"
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin text-purple-400')} />
+          </button>
+
+          {unreadCount > 0 ? (
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+              <span>{unreadCount} UNREAD ALERTS</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>ALL ALERTS READ</span>
+            </span>
+          )}
+
           {unreadCount > 0 && (
             <button
               onClick={markAllRead}
@@ -158,7 +217,7 @@ export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
       </div>
 
       {/* Severity Filter Tabs */}
-      <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono overflow-x-auto">
+      <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono overflow-x-auto scrollbar-none">
         <Filter className="w-3 h-3 text-slate-500 ml-1 mr-0.5 shrink-0" />
         {(['all', 'info', 'success', 'warning', 'error'] as const).map((sev) => (
           <button
@@ -167,7 +226,7 @@ export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
             className={cn(
               'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap',
               severityFilter === sev
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold'
                 : 'text-slate-400 hover:text-slate-200'
             )}
           >
@@ -191,7 +250,7 @@ export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
                 className={cn(
                   'p-3.5 rounded-2xl border transition-all space-y-1 relative group',
                   !notif.read
-                    ? 'bg-slate-900 border-cyan-500/40 shadow-[0_0_10px_rgba(0,240,255,0.1)]'
+                    ? 'bg-slate-900 border-purple-500/40 shadow-[0_0_10px_rgba(168,85,247,0.1)]'
                     : 'bg-slate-900/50 border-slate-800/80 opacity-80 hover:opacity-100'
                 )}
               >
@@ -211,7 +270,7 @@ export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
                     />
                     <h4 className="text-xs font-bold text-slate-100 truncate">{notif.title}</h4>
                     {!notif.read && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
                     )}
                   </div>
 
@@ -233,7 +292,7 @@ export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
                   <div className="flex justify-end pt-1">
                     <button
                       onClick={() => markOneRead(notif.id)}
-                      className="text-[10px] font-mono text-cyan-400 hover:text-cyan-200 cursor-pointer"
+                      className="text-[10px] font-mono text-purple-400 hover:text-purple-200 cursor-pointer"
                     >
                       Mark as Read
                     </button>

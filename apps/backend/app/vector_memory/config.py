@@ -11,11 +11,13 @@ from pydantic import BaseModel, Field
 class VectorConfig(BaseModel):
     """Configuration settings for Enterprise Vector Database & Embedding Engine."""
 
-    # Default Embedding Engine Settings
-    default_provider: str = Field(default="sentence-transformers", description="Primary embedding provider")
-    default_model: str = Field(default="BAAI/bge-small-en-v1.5", description="Primary local embedding model tag")
-    default_dimension: int = Field(default=384, description="Embedding vector space dimensionality")
+    # Default Embedding Engine Settings (Local-First Neural)
+    default_provider: str = Field(default="ollama", description="Primary embedding provider")
+    default_model: str = Field(default="nomic-embed-text", description="Primary local embedding model tag")
+    default_dimension: int = Field(default=768, description="Embedding vector space dimensionality")
     distance_metric: str = Field(default="cosine", description="Primary vector distance metric (cosine, euclidean, dot)")
+    ollama_base_url: str = Field(default="http://127.0.0.1:11434", description="Local Ollama instance URL")
+    ollama_timeout_seconds: float = Field(default=30.0, description="Timeout for local embedding requests")
 
     # Vector Store Backend Configuration
     vector_store_backend: str = Field(default="sqlite", description="Active vector store backend (sqlite, chromadb, faiss, qdrant, milvus)")
@@ -30,6 +32,10 @@ class VectorConfig(BaseModel):
     # Supported Local Embedding Models Registry
     supported_models: Dict[str, int] = Field(
         default_factory=lambda: {
+            "nomic-embed-text": 768,
+            "all-minilm": 384,
+            "bge-small": 384,
+            "bge-base": 768,
             "BAAI/bge-small-en-v1.5": 384,
             "BAAI/bge-base-en-v1.5": 768,
             "Nomic Embed": 768,

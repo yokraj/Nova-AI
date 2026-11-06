@@ -6,6 +6,7 @@ and zero mock fallbacks.
 """
 
 import json
+import time
 from typing import Any, Dict, List, Optional
 import httpx
 import structlog
@@ -44,10 +45,11 @@ class ProviderRouter:
         provider: str,
         model: str,
         prompt: str,
-        messages: Optional[List[Dict[str, str]]] = None,
+        messages: Optional[List[Dict[str, Any]]] = None,
         system_prompt: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Dispatches completion call to target provider backend (Real Local/Cloud execution)."""
         target_provider = (provider or self.config.default_provider).lower()
@@ -56,7 +58,13 @@ class ProviderRouter:
         # Strictly enforce Zero-Cost Policy: Block commercial providers before any network call
         ZeroCostPolicy.assert_llm_provider_allowed(target_provider)
 
-        logger.info("request_dispatched", provider=target_provider, model=target_model, has_history=bool(messages))
+        logger.info(
+            "request_dispatched",
+            provider=target_provider,
+            model=target_model,
+            has_history=bool(messages),
+            tools_count=len(tools) if tools else 0,
+        )
 
         if target_provider in ("ollama", "local"):
             # Check availability before long dispatch
@@ -72,6 +80,79 @@ class ProviderRouter:
                 options["num_predict"] = max_tokens
             if temperature is not None:
                 options["temperature"] = temperature
+
+            # When tools are requested, execute structured function calling via Ollama /api/chat
+            if tools:
+                endpoint = f"{self.config.ollama_base_url.rstrip('/')}/api/chat"
+                chat_messages: List[Dict[str, Any]] = []
+                if system_prompt:
+                    chat_messages.append({"role": "system", "content": system_prompt})
+                if messages:
+                    chat_messages.extend(messages)
+                # Ensure the current prompt or state is represented
+                if not chat_messages:
+                    chat_messages.append({"role": "user", "content": prompt})
+                elif chat_messages[-1].get("role") not in ("user", "tool", "assistant"):
+                    chat_messages.append({"role": "user", "content": prompt})
+                elif chat_messages[-1].get("role") == "user" and chat_messages[-1].get("content") != prompt:
+                    chat_messages.append({"role": "user", "content": prompt})
+
+                payload: Dict[str, Any] = {
+                    "model": target_model,
+                    "messages": chat_messages,
+                    "tools": tools,
+                    "stream": False,
+                }
+                if options:
+                    payload["options"] = options
+
+                try:
+                    timeout = httpx.Timeout(connect=15.0, read=120.0, write=15.0, pool=15.0)
+                    async with httpx.AsyncClient(timeout=timeout) as client:
+                        response = await client.post(endpoint, json=payload)
+                        response.raise_for_status()
+                        res_data = response.json()
+
+                    msg = res_data.get("message", {})
+                    raw_content = msg.get("content", "")
+                    thinking = msg.get("thinking", "")
+                    raw_tool_calls = msg.get("tool_calls", [])
+
+                    normalized_tool_calls: List[Dict[str, Any]] = []
+                    for idx, tc in enumerate(raw_tool_calls):
+                        func = tc.get("function", {})
+                        fn_name = func.get("name", "")
+                        fn_args = func.get("arguments", {})
+                        if isinstance(fn_args, str):
+                            try:
+                                fn_args = json.loads(fn_args)
+                            except Exception:
+                                fn_args = {"raw": fn_args}
+                        elif not isinstance(fn_args, dict):
+                            fn_args = {"value": fn_args}
+
+                        tc_id = tc.get("id") or f"call_{fn_name}_{idx}_{int(time.time())}"
+                        normalized_tool_calls.append({
+                            "id": tc_id,
+                            "name": fn_name,
+                            "arguments": fn_args,
+                        })
+
+                    prompt_tokens = res_data.get("prompt_eval_count", 0) or int(len(prompt.split()) * 1.3)
+                    completion_tokens = res_data.get("eval_count", 0) or int(len((raw_content or "").split()) * 1.3)
+
+                    return {
+                        "content": raw_content,
+                        "thinking": thinking,
+                        "tool_calls": normalized_tool_calls,
+                        "provider": target_provider,
+                        "model": target_model,
+                        "prompt_tokens": prompt_tokens,
+                        "completion_tokens": completion_tokens,
+                    }
+                except Exception as exc:
+                    logger.error("ollama_tool_dispatch_failed", error=str(exc))
+                    raise
 
             # Decide whether to use /api/chat (for multi-turn) or /api/generate
             if messages and len(messages) > 0:
@@ -161,6 +242,8 @@ class ProviderRouter:
 
                 return {
                     "content": content,
+                    "thinking": "",
+                    "tool_calls": [],
                     "provider": target_provider,
                     "model": target_model,
                     "prompt_tokens": prompt_tokens,

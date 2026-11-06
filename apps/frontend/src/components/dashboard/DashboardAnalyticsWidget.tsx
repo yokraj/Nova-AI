@@ -10,22 +10,48 @@ import {
   Tooltip as RechartsTooltip,
   CartesianGrid,
 } from 'recharts';
-import { BarChart3, TrendingUp, Layers } from 'lucide-react';
+import { BarChart3, TrendingUp, Layers, RefreshCw } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { AnalyticsSeries } from '@/types/dashboard';
 import { MOCK_ANALYTICS_SERIES } from '@/mock/mockDashboardData';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
-interface DashboardAnalyticsWidgetProps {
+export interface DashboardAnalyticsWidgetProps {
   className?: string;
   data?: AnalyticsSeries;
+  onRefresh?: () => void;
+  isLoading?: boolean;
 }
 
 export const DashboardAnalyticsWidget: React.FC<DashboardAnalyticsWidgetProps> = ({
   className,
-  data = MOCK_ANALYTICS_SERIES,
+  data: externalData,
+  onRefresh,
+  isLoading: externalIsLoading,
 }) => {
   const [activeTab, setActiveTab] = useState<'requests' | 'agents' | 'memory'>('requests');
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d'>('24h');
+
+  // Hook into live dashboard data
+  const {
+    data: dashboardData,
+    connectionStatus,
+    isRefreshing,
+    refresh: hookRefresh,
+  } = useDashboardData();
+
+  const isConnected = connectionStatus === 'connected' && !!dashboardData?.isConnected;
+  const data = externalData || (isConnected ? dashboardData?.analytics : undefined) || MOCK_ANALYTICS_SERIES;
+  const lastUpdated = dashboardData?.lastUpdated;
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : isRefreshing;
+
+  const handleRefreshClick = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      hookRefresh(true);
+    }
+  };
 
   return (
     <div
@@ -35,23 +61,52 @@ export const DashboardAnalyticsWidget: React.FC<DashboardAnalyticsWidgetProps> =
       )}
     >
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shrink-0">
             <BarChart3 className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
-              Telemetry Analytics & AI Workload
-            </h3>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
+                Telemetry Analytics & AI Workload
+              </h3>
+              {lastUpdated && (
+                <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
+                  • Polled: {new Date(lastUpdated).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 font-mono">
               Request throughput, agent task density & memory growth
             </p>
           </div>
         </div>
 
-        {/* Tab & Timeframe Buttons */}
+        {/* Tab & Timeframe Buttons + Refresh */}
         <div className="flex items-center space-x-2 flex-wrap gap-1">
+          <button
+            onClick={handleRefreshClick}
+            disabled={isLoading}
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh Analytics"
+            aria-label="Refresh analytics"
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin text-cyan-400')} />
+          </button>
+
+          {isConnected ? (
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              <span>HISTORICAL METRICS (LIVE)</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-slate-400 text-xs font-mono font-bold">
+              <span className="w-1.5 h-1.5 rounded-full border border-slate-400" />
+              <span>STANDALONE SNAPSHOT</span>
+            </span>
+          )}
+
           {/* Metric Tabs */}
           <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-xs font-mono">
             <button
@@ -124,8 +179,8 @@ export const DashboardAnalyticsWidget: React.FC<DashboardAnalyticsWidgetProps> =
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="time" stroke="#64748b" fontSize={11} fontVariant="mono" />
-              <YAxis stroke="#64748b" fontSize={11} fontVariant="mono" />
+              <XAxis dataKey="time" stroke="#64748b" fontSize={11} />
+              <YAxis stroke="#64748b" fontSize={11} />
               <RechartsTooltip
                 contentStyle={{
                   backgroundColor: '#0f172a',
@@ -151,8 +206,8 @@ export const DashboardAnalyticsWidget: React.FC<DashboardAnalyticsWidgetProps> =
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data.agentActivityDistribution}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="name" stroke="#64748b" fontSize={11} fontVariant="mono" />
-              <YAxis stroke="#64748b" fontSize={11} fontVariant="mono" />
+              <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
+              <YAxis stroke="#64748b" fontSize={11} />
               <RechartsTooltip
                 contentStyle={{
                   backgroundColor: '#0f172a',
@@ -177,8 +232,8 @@ export const DashboardAnalyticsWidget: React.FC<DashboardAnalyticsWidgetProps> =
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-              <XAxis dataKey="day" stroke="#64748b" fontSize={11} fontVariant="mono" />
-              <YAxis stroke="#64748b" fontSize={11} fontVariant="mono" />
+              <XAxis dataKey="day" stroke="#64748b" fontSize={11} />
+              <YAxis stroke="#64748b" fontSize={11} />
               <RechartsTooltip
                 contentStyle={{
                   backgroundColor: '#0f172a',
@@ -202,7 +257,7 @@ export const DashboardAnalyticsWidget: React.FC<DashboardAnalyticsWidgetProps> =
       </div>
 
       {/* Footer Metrics */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-mono text-slate-400 pt-2 border-t border-slate-800 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs font-mono text-slate-400 pt-2 border-t border-slate-800/80 gap-2">
         <span>
           Peak Throughput: <strong className="text-cyan-300">1,560 req/min</strong>
         </span>

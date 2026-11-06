@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Workflow,
   Play,
@@ -12,40 +12,69 @@ import {
 import { cn } from '@/utils/cn';
 import { MockAutomation } from '@/types/dashboard';
 import { MOCK_AUTOMATIONS } from '@/mock/mockDashboardData';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
-interface AutomationCenterWidgetProps {
+export interface AutomationCenterWidgetProps {
   className?: string;
   automations?: MockAutomation[];
-  onTriggerAutomation?: (id: string) => void;
+  onTriggerAutomation?: (id: string) => void | Promise<void>;
   onCancelAutomation?: (id: string) => Promise<boolean> | void;
+  onRefresh?: () => void;
+  isLoading?: boolean;
 }
 
 export const AutomationCenterWidget: React.FC<AutomationCenterWidgetProps> = ({
   className,
-  automations = MOCK_AUTOMATIONS,
+  automations: externalAutomations,
   onTriggerAutomation,
   onCancelAutomation,
+  onRefresh,
+  isLoading: externalIsLoading,
 }) => {
-  const [automationList, setAutomationList] = useState<MockAutomation[]>(automations);
-  const [runningId, setRunningId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [runningId, setRunningId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Hook into live dashboard data
+  const {
+    data: dashboardData,
+    connectionStatus,
+    isRefreshing,
+    refresh: hookRefresh,
+  } = useDashboardData();
+
+  const isConnected = connectionStatus === 'connected' && !!dashboardData?.isConnected;
+  const rawAutomations = externalAutomations || (isConnected ? dashboardData?.automations : undefined) || MOCK_AUTOMATIONS;
+  const lastUpdated = dashboardData?.lastUpdated;
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : isRefreshing;
+
+  const [automationList, setAutomationList] = useState<MockAutomation[]>(rawAutomations);
+
   React.useEffect(() => {
-    setAutomationList(automations);
-  }, [automations]);
+    setAutomationList(rawAutomations);
+  }, [rawAutomations]);
+
+  const handleRefreshClick = () => {
+    if (onRefresh) {
+      onRefresh();
+    } else {
+      hookRefresh(true);
+    }
+  };
 
   const categories = ['all', 'Routine', 'Maintenance', 'Monitoring'];
 
-  const filteredAutomations = automationList.filter((auto) => {
-    const matchesSearch =
-      auto.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      auto.trigger.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      auto.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || auto.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredAutomations = useMemo(() => {
+    return automationList.filter((auto) => {
+      const matchesSearch =
+        auto.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        auto.trigger.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        auto.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || auto.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [automationList, searchQuery, categoryFilter]);
 
   const toggleStatus = (id: string) => {
     setAutomationList((prev) =>
@@ -53,6 +82,7 @@ export const AutomationCenterWidget: React.FC<AutomationCenterWidgetProps> = ({
         if (item.id === id) {
           const nextStatus = item.status === 'active' ? 'paused' : 'active';
           setToastMessage(`Workflow "${item.name}" set to ${nextStatus}.`);
+          setTimeout(() => setToastMessage(null), 3000);
           return { ...item, status: nextStatus };
         }
         return item;
@@ -60,10 +90,12 @@ export const AutomationCenterWidget: React.FC<AutomationCenterWidgetProps> = ({
     );
   };
 
-  const triggerNow = (id: string) => {
+  const triggerNow = async (id: string) => {
     setRunningId(id);
-    setTimeout(() => {
-      setRunningId(null);
+    try {
+      if (onTriggerAutomation) {
+        await onTriggerAutomation(id);
+      }
       setAutomationList((prev) =>
         prev.map((item) =>
           item.id === id
@@ -71,9 +103,13 @@ export const AutomationCenterWidget: React.FC<AutomationCenterWidgetProps> = ({
             : item
         )
       );
-      setToastMessage(`Automation routine triggered and executed successfully.`);
-      if (onTriggerAutomation) onTriggerAutomation(id);
-    }, 1200);
+      setToastMessage(`Automation routine triggered successfully.`);
+    } catch {
+      setToastMessage(`Failed to trigger automation routine.`);
+    } finally {
+      setRunningId(null);
+      setTimeout(() => setToastMessage(null), 3000);
+    }
   };
 
   const activeCount = automationList.filter((a) => a.status === 'active' || a.status === 'scheduled').length;
@@ -86,31 +122,49 @@ export const AutomationCenterWidget: React.FC<AutomationCenterWidgetProps> = ({
       )}
     >
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/80 pb-3 gap-2">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
             <Workflow className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
-              No-Code Automation & Workflow Studio
-            </h3>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-sans">
+                No-Code Automation & Workflow Studio
+              </h3>
+              {lastUpdated && (
+                <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
+                  • Polled: {new Date(lastUpdated).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate-400 font-mono">
               Scheduled routines, background cron tasks & event triggers
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          {automationList[0]?.isLive ? (
+        {/* Status Pill & Refresh */}
+        <div className="flex items-center space-x-2 shrink-0">
+          <button
+            onClick={handleRefreshClick}
+            disabled={isLoading}
+            className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 transition-all cursor-pointer disabled:opacity-50"
+            title="Refresh Automations"
+            aria-label="Refresh automations"
+          >
+            <RefreshCw className={cn('w-3.5 h-3.5', isLoading && 'animate-spin text-emerald-400')} />
+          </button>
+
+          {isConnected ? (
             <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
               <span>LIVE WORKFLOWS ({activeCount} ARMED)</span>
             </span>
           ) : (
-            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-mono font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              <span>OFFLINE • CACHED ({activeCount} ARMED)</span>
+            <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/80 text-slate-400 text-xs font-mono font-bold">
+              <span className="w-1.5 h-1.5 rounded-full border border-slate-400" />
+              <span>STANDALONE WORKFLOWS ({activeCount} ARMED)</span>
             </span>
           )}
         </div>
@@ -138,14 +192,14 @@ export const AutomationCenterWidget: React.FC<AutomationCenterWidgetProps> = ({
           )}
         </div>
 
-        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono">
+        <div className="flex items-center space-x-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800 text-[11px] font-mono overflow-x-auto scrollbar-none">
           <Filter className="w-3 h-3 text-slate-500 ml-1 mr-0.5 shrink-0" />
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setCategoryFilter(cat)}
               className={cn(
-                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer',
+                'px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap',
                 categoryFilter === cat
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
                   : 'text-slate-400 hover:text-slate-200'
@@ -179,34 +233,36 @@ export const AutomationCenterWidget: React.FC<AutomationCenterWidgetProps> = ({
             return (
               <div
                 key={auto.id}
-                className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800/90 hover:border-slate-700 transition-all space-y-2.5"
+                className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800/90 hover:border-slate-700/80 transition-all space-y-2.5 flex flex-col justify-between"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                      {auto.category}
-                    </span>
-                    <span
-                      className={cn(
-                        'text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border uppercase',
-                        auto.status === 'active'
-                          ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                          : auto.status === 'scheduled'
-                          ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300'
-                          : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
-                      )}
-                    >
-                      {auto.status}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-500">Executions: {auto.executionCount}</span>
-                </div>
-
                 <div>
-                  <h4 className="text-xs font-bold text-slate-100 truncate">{auto.name}</h4>
-                  <p className="text-[11px] font-mono text-slate-400 mt-0.5 truncate">
-                    Trigger: <span className="text-cyan-300">{auto.trigger}</span>
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                        {auto.category}
+                      </span>
+                      <span
+                        className={cn(
+                          'text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border uppercase',
+                          auto.status === 'active'
+                            ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                            : auto.status === 'scheduled'
+                            ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300'
+                            : 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                        )}
+                      >
+                        {auto.status}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500">Executions: {auto.executionCount}</span>
+                  </div>
+
+                  <div className="mt-2">
+                    <h4 className="text-xs font-bold text-slate-100 truncate">{auto.name}</h4>
+                    <p className="text-[11px] font-mono text-slate-400 mt-0.5 truncate">
+                      Trigger: <span className="text-cyan-300">{auto.trigger}</span>
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-2 border-t border-slate-800/60">

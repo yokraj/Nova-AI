@@ -1,13 +1,15 @@
 """Security Engine enforcing human approval holds and AES-256 encrypted credential storage.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 from app.ai.desktop_automation.exceptions import ApprovalRequiredError
+from app.security.approval_manager import approval_manager
 
 
 class SecurityEngine:
     """Enforces human approval holds for sensitive/destructive operations and manages encrypted credentials."""
 
+    # Authoritative set of sensitive/destructive actions requiring explicit human approval
     SENSITIVE_ACTIONS = {
         "registry_write",
         "administrator_elevation",
@@ -17,6 +19,20 @@ class SecurityEngine:
         "payment_transfer",
         "password_change",
         "file_delete",
+        "file_move",
+        "file_operation_delete",
+        "file_operation_move",
+        "open_application",
+        "close_application",
+        "close_window",
+        "keyboard_type",
+        "keyboard_press_enter",
+        "keyboard_press_delete",
+        "keyboard_combination",
+        "mouse_click",
+        "system_control_clipboard_get",
+        "system_control_clipboard_set",
+        "create_file_overwrite",
         "browser_payment",
         "credential_expose",
         "destructive_web_action",
@@ -40,10 +56,28 @@ class SecurityEngine:
         """Returns True if action is sensitive and requires explicit user confirmation."""
         return action_name.lower() in self.SENSITIVE_ACTIONS
 
-    def enforce_security_check(self, action_name: str, is_user_approved: bool = False) -> None:
-        """Raises ApprovalRequiredError if action requires approval and has not been approved."""
-        if self.check_approval_required(action_name) and not is_user_approved:
-            raise ApprovalRequiredError(f"Action '{action_name}' requires explicit human approval before execution.")
+    def enforce_security_check(
+        self,
+        action_name: str,
+        approval_token: Optional[str] = None,
+        arguments: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,
+    ) -> None:
+        """Enforces server-managed approval validation for sensitive operations."""
+        if self.check_approval_required(action_name):
+            if not approval_token:
+                raise ApprovalRequiredError(
+                    f"Action '{action_name}' requires explicit human approval before execution. "
+                    f"No approval token was provided."
+                )
+            valid, msg = approval_manager.validate_and_consume_approval(
+                approval_token=approval_token,
+                tool_name=action_name,
+                arguments=arguments or {},
+                user_id=user_id,
+            )
+            if not valid:
+                raise ApprovalRequiredError(f"Approval validation failed: {msg}")
 
     def inspect_web_prompt_injection(self, text: str) -> Dict[str, Any]:
         """Classifies text extracted from web page as untrusted DATA and detects prompt injection attempts."""

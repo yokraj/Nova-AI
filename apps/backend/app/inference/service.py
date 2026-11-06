@@ -60,34 +60,17 @@ class InferenceService:
         task_analysis = self.agent_engine.understand_task(request.prompt)
         intent = task_analysis["intent"]
 
-        if intent in (
-            TaskIntent.SECURITY_VIOLATION,
-            TaskIntent.MULTI_STEP_TASK,
-            TaskIntent.DESKTOP_OPERATION,
-            TaskIntent.FILE_OPERATION,
-            TaskIntent.CODE_ANALYSIS,
-        ):
-            plan = self.agent_engine.create_plan(request.prompt, task_analysis)
-            report = await self.agent_engine.execute_plan(plan)
+        if intent == TaskIntent.SECURITY_VIOLATION:
             latency_ms = round((time.perf_counter() - t0) * 1000, 2)
-            content = report.final_output
+            content = f"Security Error: Access Denied. {task_analysis.get('reason', 'Operation restricted by security policy.')}"
             p_tokens = int(len(request.prompt.split()) * 1.3)
             c_tokens = int(len(content.split()) * 1.3)
 
-            category_map = {
-                TaskIntent.SECURITY_VIOLATION: "Security",
-                TaskIntent.MULTI_STEP_TASK: "Multi-Step Automation",
-                TaskIntent.DESKTOP_OPERATION: "Desktop Automation",
-                TaskIntent.FILE_OPERATION: "File Operations",
-                TaskIntent.CODE_ANALYSIS: "Code Intelligence",
-            }
-            task_category = category_map.get(intent, "Agent Execution")
-
             log_record = await self.repository.save_request_log(
                 prompt=request.prompt,
-                model_name="unified_agent_execution_engine",
+                model_name="workspace_security_guard",
                 provider="local_engine",
-                task_category=task_category,
+                task_category="Security",
                 prompt_tokens=p_tokens,
                 completion_tokens=c_tokens,
                 latency_ms=latency_ms,
@@ -102,9 +85,9 @@ class InferenceService:
             return ChatInferenceResponse(
                 request_id=str(log_record.id),
                 content=content,
-                model="unified_agent_execution_engine",
+                model="workspace_security_guard",
                 provider="local_engine",
-                task_category=task_category,
+                task_category="Security",
                 prompt_tokens=p_tokens,
                 completion_tokens=c_tokens,
                 total_tokens=p_tokens + c_tokens,
@@ -112,12 +95,10 @@ class InferenceService:
                 created_at=cast(Any, log_record.created_at),
                 is_deterministic=True,
                 verification={
-                    "valid": report.verified,
-                    "method": "unified_agent_physical_verification",
-                    "status": report.status,
-                    "steps_succeeded": report.steps_succeeded,
-                    "steps_total": report.steps_total,
-                    "verification_summary": report.verification_summary,
+                    "valid": False,
+                    "method": "workspace_security_guard",
+                    "status": "BLOCKED",
+                    "reason": task_analysis.get("reason", "security_violation"),
                 },
             )
 
@@ -130,7 +111,7 @@ class InferenceService:
         provider_name = route_res["selected_provider"]
         task_category = route_res["task_category"]
 
-        # 2. Check for Deterministic Arithmetic Execution
+        # 2. Check for Deterministic Arithmetic Execution Fast-Path
         if request.use_deterministic_tools and route_res.get("is_deterministic_arithmetic"):
             det_result = self.calculator.extract_and_evaluate(request.prompt)
             if det_result:
@@ -169,6 +150,70 @@ class InferenceService:
                     is_deterministic=True,
                     verification={"valid": True, "method": "deterministic_ast_evaluation"},
                 )
+
+        # 3. Dynamic Local LLM Tool Calling Engine (F2.0.3)
+        if request.tools_enabled:
+            gpu_res = self.gpu_scheduler.allocate_gpu(vram_required_mb=4096)
+            try:
+                dynamic_res = await self.agent_engine.execute_dynamic_tool_loop(
+                    prompt=request.prompt,
+                    messages=request.messages,
+                    system_prompt=request.system_prompt,
+                    model=model_name,
+                    provider=provider_name,
+                    max_rounds=5,
+                    time_budget_sec=60.0,
+                    approval_token=request.approval_token,
+                )
+            finally:
+                if not gpu_res["fallback_to_cpu"]:
+                    self.gpu_scheduler.release_gpu(gpu_res["gpu_id"], vram_released_mb=4096)
+
+            latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+            content = dynamic_res.final_content
+            p_tokens = dynamic_res.prompt_tokens or int(len(request.prompt.split()) * 1.3)
+            c_tokens = dynamic_res.completion_tokens or int(len(content.split()) * 1.3)
+
+            verification = self.response_validator.validate_response(
+                request.prompt, content, task_category=task_category
+            )
+            verification["tool_invocations_count"] = len(dynamic_res.invocations)
+            verification["all_tools_verified"] = dynamic_res.verified
+            verification["summary"] = dynamic_res.verification_summary
+            verification["execution_status"] = dynamic_res.status
+
+            log_record = await self.repository.save_request_log(
+                prompt=request.prompt,
+                model_name=model_name,
+                provider=provider_name,
+                task_category=task_category,
+                prompt_tokens=p_tokens,
+                completion_tokens=c_tokens,
+                latency_ms=latency_ms,
+            )
+
+            self.stats_tracker.record_inference(
+                prompt_tokens=p_tokens,
+                completion_tokens=c_tokens,
+                ttft_ms=15.0,
+            )
+
+            return ChatInferenceResponse(
+                request_id=str(log_record.id),
+                content=content,
+                model=model_name,
+                provider=provider_name,
+                task_category=task_category,
+                prompt_tokens=p_tokens,
+                completion_tokens=c_tokens,
+                total_tokens=p_tokens + c_tokens,
+                latency_ms=latency_ms,
+                created_at=cast(Any, log_record.created_at),
+                is_deterministic=False,
+                verification=verification,
+                tool_calls=[inv.to_dict() for inv in dynamic_res.invocations] if dynamic_res.invocations else None,
+                rounds=dynamic_res.rounds,
+            )
 
         # 2.5 Document Intelligence & Workspace File Grounding
         effective_prompt = request.prompt

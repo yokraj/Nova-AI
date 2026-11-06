@@ -1,7 +1,8 @@
 """Vector Search Module.
 
 Implements VectorSearch providing semantic_search, similar_documents, similar_conversations,
-similar_projects, similar_workspace, nearest_neighbors, and hybrid_candidates.
+similar_projects, similar_workspace, nearest_neighbors, and hybrid_candidates with strict
+dimension validation and workspace isolation.
 """
 
 from typing import Any, Dict, List, Optional
@@ -13,6 +14,7 @@ from app.vector_memory.similarity import SimilarityEngine
 from app.vector_memory.ranking import VectorRankingEngine
 from app.vector_memory.vector_cache import VectorCache
 from app.vector_memory.schemas import VectorSearchResult
+from app.vector_memory.exceptions import EmbeddingModelUnavailableError
 
 logger = structlog.get_logger(__name__)
 
@@ -42,10 +44,24 @@ class VectorSearch:
         threshold: float = 0.0,
     ) -> List[VectorSearchResult]:
         """Performs semantic vector search for a text query string."""
-        embed_res = await self.embedding_engine.generate_embedding(query)
-        query_vector = embed_res["vector"]
+        if not query or not query.strip():
+            logger.debug("empty_query_provided_to_semantic_search")
+            return []
 
-        candidates = await self.vector_store.search_vectors(query_vector, top_k=top_k * 2)
+        clean_query = query.strip()
+        embed_res = await self.embedding_engine.generate_embedding(clean_query)
+        query_vector = embed_res["vector"]
+        query_model = embed_res["model_name"]
+
+        # Search candidates matching query vector with workspace & project isolation
+        candidates = await self.vector_store.search_vectors(
+            query_vector,
+            top_k=top_k * 2,
+            workspace=workspace,
+            project=project,
+            model_name=query_model,
+        )
+
         filtered = SimilarityEngine.filter_by_threshold(candidates, threshold)
         ranked = self.ranking_engine.rank_candidates(filtered, target_workspace=workspace, target_project=project)
 
@@ -57,14 +73,14 @@ class VectorSearch:
                     memory_id=r["memory_id"],
                     similarity_score=r.get("composite_rank_score", r["similarity_score"]),
                     distance=r["distance"],
-                    model_name=meta.get("model_name", embed_res["model_name"]),
+                    model_name=meta.get("model_name", query_model),
                     workspace=meta.get("workspace", workspace or "Nova"),
                     project=meta.get("project", project),
                     text_snippet=meta.get("text_snippet"),
                 )
             )
 
-        logger.info("semantic_search_executed", query_snippet=query[:30], count=len(results))
+        logger.info("semantic_search_executed", query_snippet=clean_query[:30], count=len(results), model=query_model)
         return results
 
     async def similar_documents(self, document_text: str, top_k: int = 5) -> List[VectorSearchResult]:
@@ -83,12 +99,35 @@ class VectorSearch:
         """Finds memories similar within workspace scope."""
         return await self.semantic_search(workspace_name, workspace=workspace_name, top_k=top_k)
 
-    async def nearest_neighbors(self, query_vector: List[float], top_k: int = 10) -> List[Dict[str, Any]]:
+    async def nearest_neighbors(
+        self,
+        query_vector: List[float],
+        top_k: int = 10,
+        workspace: Optional[str] = None,
+        project: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """Retrieves raw nearest neighbor vector records."""
-        return await self.vector_store.search_vectors(query_vector, top_k=top_k)
+        if not query_vector:
+            return []
+        return await self.vector_store.search_vectors(query_vector, top_k=top_k, workspace=workspace, project=project)
 
-    async def hybrid_candidates(self, query: str, top_k: int = 20) -> List[Dict[str, Any]]:
+    async def hybrid_candidates(
+        self,
+        query: str,
+        top_k: int = 20,
+        workspace: Optional[str] = None,
+        project: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """Retrieves candidate vectors prepared for hybrid RAG reranking."""
-        embed_res = await self.embedding_engine.generate_embedding(query)
-        candidates = await self.vector_store.search_vectors(embed_res["vector"], top_k=top_k)
+        if not query or not query.strip():
+            return []
+        clean_query = query.strip()
+        embed_res = await self.embedding_engine.generate_embedding(clean_query)
+        candidates = await self.vector_store.search_vectors(
+            embed_res["vector"],
+            top_k=top_k,
+            workspace=workspace,
+            project=project,
+            model_name=embed_res["model_name"],
+        )
         return candidates
